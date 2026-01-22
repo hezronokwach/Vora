@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMarketStore } from '@/store/useMarketStore';
 import { X, CreditCard, User, MapPin } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -42,6 +42,19 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
       });
 
       const { sessionId } = await response.json();
+      
+      // Store order in Firebase before redirecting
+      const { createOrder, generateSessionId } = await import('@/lib/firebaseService');
+      await createOrder({
+        items: cart,
+        subtotal,
+        emotionDiscount,
+        discountAmount,
+        total,
+        emotionData,
+        sessionId: generateSessionId(),
+      });
+      
       const stripe = await stripePromise;
       
       if (stripe) {
