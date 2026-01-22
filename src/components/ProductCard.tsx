@@ -3,13 +3,23 @@
 import { motion } from 'framer-motion';
 import { useMarketStore, type Product } from '@/store/useMarketStore';
 import { urlFor } from '@/lib/sanity';
+import { EmotionDiscountBadge } from './EmotionDiscountBadge';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
-  const addToCart = useMarketStore(state => state.addToCart);
+  const { addToCart, emotionData } = useMarketStore();
+
+  // Calculate emotion discount for this product
+  const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
+  const maxStress = Math.max(...stressEmotions.map(e => emotionData[e] || 0));
+  const baseDiscount = Math.min(Math.round(maxStress * 25), 25);
+  
+  // Apply product's emotion boost multiplier
+  const emotionDiscount = Math.round(baseDiscount * (product.emotionBoost || 0.15));
+  const discountedPrice = product.price * (1 - emotionDiscount / 100);
 
   const handleAddToCart = () => {
     addToCart(product, 1);
@@ -31,6 +41,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           alt={product.title}
           className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        
+        <EmotionDiscountBadge 
+          discount={emotionDiscount}
+          reasoning={emotionDiscount > 0 ? "Comfort discount" : undefined}
+        />
+        
         {product.stock < 5 && (
           <div className="absolute top-2 right-2 bg-rose-500/80 text-white text-xs px-2 py-1 rounded-full">
             Low Stock
@@ -44,7 +60,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         
         <div className="flex items-center justify-between mt-3">
           <div>
-            <p className="text-2xl font-bold text-calm">${product.price}</p>
+            {emotionDiscount > 0 ? (
+              <div>
+                <p className="text-lg text-white/60 line-through">${product.price}</p>
+                <p className="text-2xl font-bold text-calm">${discountedPrice.toFixed(2)}</p>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-calm">${product.price}</p>
+            )}
             <p className="text-xs text-white/40">{product.stock} in stock</p>
           </div>
           
