@@ -191,10 +191,16 @@ export const useHume = () => {
                             maxPrice: toolParams.max_price
                         });
                         
+                        let filterResponse = 'I\'ve filtered the products';
+                        if (toolParams.category) filterResponse += ` to show ${toolParams.category}`;
+                        if (toolParams.color) filterResponse += ` in ${toolParams.color}`;
+                        if (toolParams.max_price) filterResponse += ` under $${toolParams.max_price}`;
+                        filterResponse += '. Take a look at what I found for you!';
+                        
                         if (socketRef.current?.sendToolResponse) {
                             socketRef.current.sendToolResponse({
                                 toolCallId,
-                                content: `Filtered products by ${JSON.stringify(toolParams)}`
+                                content: filterResponse
                             });
                         }
                         break;
@@ -205,43 +211,58 @@ export const useHume = () => {
                         if (product) {
                             useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
                             
+                            const quantity = toolParams.quantity || 1;
+                            const cartResponse = `Perfect! I've added ${quantity > 1 ? quantity + ' ' : ''}${product.title} to your cart. ${product.stock < 5 ? 'Good choice - there are only a few left!' : 'Great choice!'}`;
+                            
                             if (socketRef.current?.sendToolResponse) {
                                 socketRef.current.sendToolResponse({
                                     toolCallId,
-                                    content: `Added ${product.title} to cart`
+                                    content: cartResponse
+                                });
+                            }
+                        } else {
+                            if (socketRef.current?.sendToolResponse) {
+                                socketRef.current.sendToolResponse({
+                                    toolCallId,
+                                    content: "I'm sorry, I couldn't find that specific item. Would you like me to show you similar products?"
                                 });
                             }
                         }
                         break;
 
                     case 'trigger_checkout':
+                        const { cart } = useMarketStore.getState();
                         useMarketStore.getState().openCheckout();
+                        
+                        const checkoutResponse = cart.length > 0 
+                            ? `I'm opening checkout for you now. You have ${cart.length} item${cart.length > 1 ? 's' : ''} ready to go!`
+                            : "Your cart is empty right now. Would you like me to help you find something special?";
                         
                         if (socketRef.current?.sendToolResponse) {
                             socketRef.current.sendToolResponse({
                                 toolCallId,
-                                content: 'Opening checkout'
+                                content: checkoutResponse
                             });
                         }
                         break;
 
                     case 'apply_discount':
-                        const { cart, emotionData } = useMarketStore.getState();
+                        const { cart: currentCart, emotionData } = useMarketStore.getState();
                         const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
                         const maxStress = Math.max(...stressEmotions.map(e => emotionData[e] || 0));
                         const discountPercentage = Math.min(Math.round(maxStress * 25), 25);
                         
+                        let discountResponse;
                         if (discountPercentage > 0) {
-                            // Apply discount logic here - could update cart prices or add discount code
-                            console.log(`Applying ${discountPercentage}% emotion discount`);
+                            discountResponse = `I can sense you might be having a tough time, and I want to help. I'm applying a ${discountPercentage}% comfort discount to your order. ${toolParams.reasoning || 'Sometimes we all need a little extra care.'} 💙`;
+                        } else {
+                            discountResponse = "You seem to be doing well today! That makes me happy. While you don't need a discount right now, I'm here if anything changes.";
                         }
                         
                         if (socketRef.current?.sendToolResponse) {
                             socketRef.current.sendToolResponse({
                                 toolCallId,
-                                content: discountPercentage > 0 
-                                    ? `Applied ${discountPercentage}% empathy discount: ${toolParams.reasoning}`
-                                    : "No discount needed - you seem to be doing well!"
+                                content: discountResponse
                             });
                         }
                         break;
@@ -259,27 +280,46 @@ export const useHume = () => {
         }
     }, [setEmotionData, stopAudioCapture]);
 
-    // Update Hume context with product information
+    // Update Hume context with product information and enhanced personality
     useEffect(() => {
         if (socketRef.current && status === 'ACTIVE') {
-            const productContext = products.slice(0, 5).map(p => 
-                `- ${p.title} ($${p.price}) - ${p.category}`
+            const productContext = products.slice(0, 8).map(p => 
+                `- ${p.title} ($${p.price}) - ${p.category} - Stock: ${p.stock}`
             ).join('\n');
 
             const baseInstructions = `
-You are Vora, an empathic shopping assistant.
-CORE RULES:
-1. Help users find products through voice commands
-2. Use filter_products to filter by category, color, or price
-3. Use add_to_cart to add products to cart
-4. Use trigger_checkout to open checkout
-5. Offer empathetic discounts when users sound stressed
-6. Be conversational and helpful, not pushy
+You are Vora, an empathic shopping assistant with a warm, caring personality.
+
+CORE PERSONALITY:
+- Speak naturally and conversationally, like a helpful friend
+- Show genuine care for the user's wellbeing and needs
+- Never be pushy or sales-focused - prioritize comfort and satisfaction
+- Offer gentle suggestions based on what you sense they might enjoy
+- When you detect stress or frustration, offer comfort and support first
+
+SHOPPING ASSISTANCE RULES:
+1. Use filter_products for any filtering requests (category, color, price)
+2. Use add_to_cart when users want to add specific items
+3. Use trigger_checkout when they're ready to purchase
+4. Use apply_discount when offering empathetic discounts for stressed users
+
+CONVERSATION EXAMPLES:
+- "I'm looking for something comfortable" → Filter for comfort-related tags, suggest soft fabrics
+- "This is expensive!" → Offer empathetic discount with caring message
+- "I'm just browsing" → "That's perfectly fine! Take your time. I'm here if you need anything."
+- "Tell me about this dress" → Describe features, styling tips, comfort aspects
+
+EMPATHY GUIDELINES:
+- If user sounds stressed: "I can sense you might be having a tough day. Let me help make this easier."
+- If user sounds happy: "I love your positive energy! Let's find something that matches that vibe."
+- If user is indecisive: "No pressure at all. Sometimes the right choice takes time."
+
+REMEMBER: You're not just selling products - you're providing a caring, supportive shopping experience.
 `;
 
             const fullPrompt = `${baseInstructions}\n\nAVAILABLE PRODUCTS:\n${productContext}`;
 
-            console.log('Syncing products to Hume');
+            console.log('Syncing enhanced Vora personality to Hume');
             socketRef.current.sendSessionSettings({
                 system_prompt: fullPrompt
             });
