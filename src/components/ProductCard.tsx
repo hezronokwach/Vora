@@ -1,0 +1,76 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useMarketStore, type Product } from '@/store/useMarketStore';
+import { urlFor } from '@/lib/sanity';
+
+interface ProductCardProps {
+  product: Product;
+}
+
+export const ProductCard = ({ product }: ProductCardProps) => {
+  const addToCart = useMarketStore(state => state.addToCart);
+
+  const handleAddToCart = () => {
+    addToCart(product, 1);
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.2 }}
+      className="glass-card p-4 rounded-2xl group cursor-pointer"
+    >
+      <div className="relative overflow-hidden rounded-xl">
+        <img 
+          src={product.image ? urlFor(product.image).width(400).height(300).url() : '/placeholder.jpg'} 
+          alt={product.title}
+          className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        {product.stock < 5 && (
+          <div className="absolute top-2 right-2 bg-rose-500/80 text-white text-xs px-2 py-1 rounded-full">
+            Low Stock
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-3">
+        <h3 className="text-lg font-bold text-white/90 line-clamp-2">{product.title}</h3>
+        <p className="text-sm text-white/60 mt-1 capitalize">{product.category}</p>
+        
+        <div className="flex items-center justify-between mt-3">
+          <div>
+            <p className="text-2xl font-bold text-calm">${product.price}</p>
+            <p className="text-xs text-white/40">{product.stock} in stock</p>
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleAddToCart}
+            className="px-4 py-2 bg-calm/20 hover:bg-calm/30 text-calm border border-calm/30 rounded-xl transition-colors text-sm font-medium"
+          >
+            Add to Cart
+          </motion.button>
+        </div>
+
+        {product.tags && product.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {product.tags.slice(0, 3).map((tag, index) => (
+              <span 
+                key={index}
+                className="text-xs px-2 py-1 bg-white/10 text-white/70 rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
