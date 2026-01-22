@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdfcfb;
+  --foreground: #1c1c1c;
+  --calm: #14b8a6; /* Teal 500 */
+  --alert: #f59e0b; /* Amber 500 */
+  --stressed: #e11d48; /* Rose 600 */
+  --card: #ffffff;
+  --border: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a; /* Slate 900 */
+    --foreground: #f8fafc;
+    --card: rgba(30, 41, 59, 0.7);
+    --border: rgba(255, 255, 255, 0.1);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-calm: var(--calm);
+  --color-alert: var(--alert);
+  --color-stressed: var(--stressed);
+  --color-card: var(--card);
+  --color-border: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  transition: background-color 0.5s ease;
+}
+
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Aceternity UI Animations */
+@keyframes first {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes second {
+  0% {
+    transform: translate(0px, 0px) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate(-20px, -30px) rotate(-120deg) scale(1.1);
+  }
+  66% {
+    transform: translate(20px, 30px) rotate(120deg) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes third {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-30px, 50px) scale(0.9);
+  }
+  66% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes fourth {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(50px, 20px) scale(1.1);
+  }
+  66% {
+    transform: translate(-30px, -40px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes fifth {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 30px) scale(0.9);
+  }
+  66% {
+    transform: translate(40px, -20px) scale(1.1);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-first {
+  animation: first 30s ease-in-out infinite;
+}
+
+.animate-second {
+  animation: second 40s ease-in-out infinite;
+}
+
+.animate-third {
+  animation: third 35s ease-in-out infinite;
+}
+
+.animate-fourth {
+  animation: fourth 45s ease-in-out infinite;
+}
+
+.animate-fifth {
+  animation: fifth 38s ease-in-out infinite;
+}
