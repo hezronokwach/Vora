@@ -43,42 +43,85 @@ Track your shopping patterns and emotional trends:
 - [Stripe Account](https://stripe.com/)
 - [Firebase Account](https://console.firebase.google.com/)
 
-### 1. Environment Configuration
-Create a `.env` file in the root directory (see `.env.example`):
-
+### 1. Clone and Install
 ```bash
-# Hume AI
-NEXT_PUBLIC_HUME_API_KEY=your_api_key
-NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id
-
-# Sanity CMS
-NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
-NEXT_PUBLIC_SANITY_DATASET=production
-SANITY_API_TOKEN=your_api_token
-
-# Stripe
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_publishable_key
-STRIPE_SECRET_KEY=your_secret_key
-
-# Firebase
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+git clone <repository-url>
+cd vora
+npm install
 ```
 
-### 2. Hume Portal Setup
-Configure voice shopping tools in the [Hume Portal](https://beta.hume.ai/evi/configs):
+### 2. Environment Configuration
+Copy `.env.example` to `.env` and fill in your API keys:
 
-1. **filter_products**: Filter by category, color, max_price
-2. **add_to_cart**: Add products with quantity
-3. **trigger_checkout**: Open checkout modal
-4. **apply_discount**: Apply emotion-based discounts
-
-### 3. Installation
 ```bash
+cp .env.example .env
+```
+
+Required environment variables:
+- **Hume AI**: Get from [Hume Portal](https://beta.hume.ai/)
+- **Sanity**: Create project at [sanity.io](https://www.sanity.io/)
+- **Stripe**: Get keys from [Stripe Dashboard](https://dashboard.stripe.com/)
+- **Firebase**: Create project at [Firebase Console](https://console.firebase.google.com/)
+
+### 3. Hume Portal Setup
+Configure voice shopping tools following [HUME_PORTAL_SETUP.md](./HUME_PORTAL_SETUP.md):
+
+1. Create new EVI configuration
+2. Add 4 required tools (filter_products, add_to_cart, trigger_checkout, apply_discount)
+3. Set empathetic system prompt
+4. Copy config ID to `.env`
+
+### 4. Sanity CMS Setup
+```bash
+cd sanity
 npm install
+npx sanity init
+npx sanity deploy
+```
+
+Seed with sample products:
+```bash
+npx sanity dataset import SEED_DATA.ndjson production
+```
+
+### 5. Firebase Setup
+1. Create Firestore database
+2. Enable Authentication (optional)
+3. Add your config to `.env`
+4. Collections will be created automatically
+
+### 6. Stripe Setup
+1. Create Stripe account
+2. Get publishable and secret keys
+3. Add to `.env`
+4. Test with Stripe test cards
+
+### 7. Run Development Server
+```bash
 npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) to see Vora in action.
+
+## Testing
+
+### Unit Tests
+```bash
+npm test
+npm run test:watch  # Watch mode
+```
+
+### E2E Tests
+```bash
+npm run test:e2e
+```
+
+### Manual Testing
+1. Start voice session
+2. Say: *"Show me comfortable dresses under $100"*
+3. Browse products with voice commands
+4. Express frustration: *"This is so expensive!"*
+5. Watch Vora offer empathetic discount
 
 ---
 
@@ -92,6 +135,57 @@ npm run dev
 - **Payment**: Stripe
 - **Charts**: Recharts
 - **Persistence**: Firebase Firestore
+- **Testing**: Jest, Playwright, Testing Library
+
+## Project Structure
+
+```
+src/
+├── app/                 # Next.js app router
+├── components/          # React components
+│   ├── ProductCard.tsx  # Product display with emotion discounts
+│   ├── CartSidebar.tsx  # Shopping cart with empathy pricing
+│   ├── VoiceController.tsx # Hume EVI integration
+│   └── AnalyticsDashboard.tsx # Real-time emotion tracking
+├── hooks/               # Custom React hooks
+│   └── useHumeHandler.ts # Voice command processing
+├── lib/                 # Utility libraries
+│   ├── sanity.ts        # CMS client
+│   ├── firebaseService.ts # Analytics persistence
+│   └── stripe.ts        # Payment processing
+├── store/               # Zustand state management
+│   └── useMarketStore.ts # E-commerce state
+└── types/               # TypeScript definitions
+```
+
+## Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md)
+- [Hume Portal Setup](./HUME_PORTAL_SETUP.md)
+- [Sanity CMS Schema](./sanity/SEED_DATA.md)
+- [Testing Guide](./tests/)
+
+## API Integrations
+
+### Hume EVI
+- Real-time emotion detection from voice
+- Custom tool handlers for shopping actions
+- Empathy-based discount calculations
+
+### Sanity CMS
+- Product catalog with emotion boost values
+- Real-time content updates
+- Image optimization and CDN
+
+### Stripe
+- Secure payment processing
+- Dynamic pricing with emotion discounts
+- Hosted checkout experience
+
+### Firebase
+- Order persistence and analytics
+- Real-time emotion tracking
+- Admin dashboard data
 
 ---
 
