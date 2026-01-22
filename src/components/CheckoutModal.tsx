@@ -8,13 +8,10 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-interface CheckoutModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+interface CheckoutModalProps {}
 
-export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
-  const { cart, closeCheckout, clearCart, emotionData } = useMarketStore();
+export const CheckoutModal = () => {
+  const { cart, checkoutOpen, setCheckoutOpen, clearCart, emotionData } = useMarketStore();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -71,13 +68,12 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
   };
 
   const handleClose = () => {
-    closeCheckout();
-    onClose();
+    setCheckoutOpen(false);
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {checkoutOpen && (
         <>
           <motion.div
             initial={{ opacity: 0 }}
@@ -95,7 +91,7 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="glass-card rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="glass-card rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" data-testid="checkout-modal">
               <div className="p-6 border-b border-white/10">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-white/90 flex items-center gap-2">
@@ -111,51 +107,63 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-4">
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-white/70">
-                      <span>Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+              <div className="p-6">
+                <div className="space-y-3 mb-6">
+                  {cart.map((item) => (
+                    <div key={item._id} className="flex justify-between items-center">
+                      <div>
+                        <p className="text-white/90 font-medium">{item.title}</p>
+                        <p className="text-white/60 text-sm">Qty: {item.quantity}</p>
+                      </div>
+                      <p className="text-white/90">${(item.price * item.quantity).toFixed(2)}</p>
                     </div>
-                    
-                    {emotionDiscount > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex justify-between text-calm"
-                      >
-                        <span>Empathy Discount ({emotionDiscount}%)</span>
-                        <span>-${discountAmount.toFixed(2)}</span>
-                      </motion.div>
-                    )}
-                    
-                    <div className="flex justify-between text-lg font-bold text-white/90 pt-2 border-t border-white/10">
-                      <span>Total</span>
-                      <span>${total.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {emotionDiscount > 0 && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-xs text-calm/80 mb-4 text-center"
-                    >
-                      We noticed you might be having a tough day. This discount is our way of sending some comfort your way! 💙
-                    </motion.p>
-                  )}
-
-                  <motion.button
-                    type="button"
-                    onClick={handleStripeCheckout}
-                    disabled={isProcessing}
-                    whileHover={{ scale: isProcessing ? 1 : 1.02 }}
-                    whileTap={{ scale: isProcessing ? 1 : 0.98 }}
-                    className="w-full py-3 bg-calm hover:bg-calm/90 disabled:bg-calm/50 text-white font-medium rounded-xl transition-colors"
-                  >
-                    {isProcessing ? 'Processing...' : `Pay $${total.toFixed(2)} with Stripe`}
-                  </motion.button>
+                  ))}
                 </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-white/70">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  {emotionDiscount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex justify-between text-calm"
+                      data-testid="emotion-discount"
+                    >
+                      <span>Empathy Discount ({emotionDiscount}%)</span>
+                      <span>-${discountAmount.toFixed(2)}</span>
+                    </motion.div>
+                  )}
+                  
+                  <div className="flex justify-between text-lg font-bold text-white/90 pt-2 border-t border-white/10">
+                    <span>Total</span>
+                    <span>${total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {emotionDiscount > 0 && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-calm/80 mb-4 text-center"
+                  >
+                    We noticed you might be having a tough day. This discount is our way of sending some comfort your way! 💙
+                  </motion.p>
+                )}
+
+                <motion.button
+                  type="button"
+                  onClick={handleStripeCheckout}
+                  disabled={isProcessing}
+                  whileHover={{ scale: isProcessing ? 1 : 1.02 }}
+                  whileTap={{ scale: isProcessing ? 1 : 0.98 }}
+                  className="w-full py-3 bg-calm hover:bg-calm/90 disabled:bg-calm/50 text-white font-medium rounded-xl transition-colors"
+                >
+                  {isProcessing ? 'Processing...' : `Pay $${total.toFixed(2)} with Stripe`}
+                </motion.button>
               </div>
             </div>
           </motion.div>
