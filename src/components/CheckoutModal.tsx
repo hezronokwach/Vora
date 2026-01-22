@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMarketStore } from '@/store/useMarketStore';
 import { X, CreditCard, User, MapPin } from 'lucide-react';
 import { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -23,20 +26,35 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
   const discountAmount = (subtotal * emotionDiscount) / 100;
   const total = subtotal - discountAmount;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStripeCheckout = async () => {
     setIsProcessing(true);
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Clear cart and close modal
-    clearCart();
-    closeCheckout();
-    setIsProcessing(false);
-    
-    // Show success message (you could add a toast here)
-    alert('Order placed successfully!');
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cart,
+          emotionDiscount,
+        }),
+      });
+
+      const { sessionId } = await response.json();
+      const stripe = await stripePromise;
+      
+      if (stripe) {
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+        if (error) {
+          console.error('Stripe redirect error:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleClose = () => {
@@ -80,87 +98,7 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                      <User size={16} />
-                      Contact Information
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="Email address"
-                      required
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                      <MapPin size={16} />
-                      Shipping Address
-                    </label>
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Full name"
-                        required
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Address"
-                        required
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder="City"
-                          required
-                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                        />
-                        <input
-                          type="text"
-                          placeholder="ZIP code"
-                          required
-                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2 flex items-center gap-2">
-                      <CreditCard size={16} />
-                      Payment Information
-                    </label>
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Card number"
-                        required
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          required
-                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                        />
-                        <input
-                          type="text"
-                          placeholder="CVC"
-                          required
-                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-calm/50 transition-colors"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-white/10 pt-4">
+              <div className="border-t border-white/10 pt-4">
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-white/70">
                       <span>Subtotal</span>
@@ -195,16 +133,17 @@ export const CheckoutModal = ({ isOpen, onClose }: CheckoutModalProps) => {
                   )}
 
                   <motion.button
-                    type="submit"
+                    type="button"
+                    onClick={handleStripeCheckout}
                     disabled={isProcessing}
                     whileHover={{ scale: isProcessing ? 1 : 1.02 }}
                     whileTap={{ scale: isProcessing ? 1 : 0.98 }}
                     className="w-full py-3 bg-calm hover:bg-calm/90 disabled:bg-calm/50 text-white font-medium rounded-xl transition-colors"
                   >
-                    {isProcessing ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+                    {isProcessing ? 'Processing...' : `Pay $${total.toFixed(2)} with Stripe`}
                   </motion.button>
                 </div>
-              </form>
+              </div>
             </div>
           </motion.div>
         </>
