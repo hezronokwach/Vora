@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { HumeClient } from 'hume';
-import { useAuraStore, type Task } from '@/store/useAuraStore';
+import { useMarketStore } from '@/store/useMarketStore';
 
 import {
     convertBlobToBase64,
@@ -20,7 +20,7 @@ export interface HumeMessage {
 }
 
 export const useHume = () => {
-    const { setStressScore, setVoiceState, tasks } = useAuraStore();
+    const { setEmotionData, products } = useMarketStore();
     const [status, setStatus] = useState<HumeStatus>('IDLE');
     const [messages, setMessages] = useState<HumeMessage[]>([]);
     const [liveTranscript, setLiveTranscript] = useState<string>('');
@@ -29,6 +29,7 @@ export const useHume = () => {
     const isSpeakerMutedRef = useRef(false);
     const [error, setError] = useState<string | null>(null);
     const [emotions, setEmotions] = useState<Record<string, number>>({});
+    const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'speaking' | 'processing'>('idle');
 
     const socketRef = useRef<any>(null);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -50,54 +51,19 @@ export const useHume = () => {
     }, []);
 
     /**
-     * Weighted Emotional Index (WEI) - Scientific Stress Calculation
-     * 
-     * Formula: Stress_Total = (Distress × 0.5) + (Anxiety × 0.3) + (Overload × 0.2)
-     * 
-     * Components:
-     * - Distress (50%): Primary burnout indicator (sadness, distress, frustration)
-     * - Anxiety (30%): Secondary stress signal (anxiety, fear, nervousness)
-     * - Overload (20%): Cognitive fatigue multiplier (tiredness, boredom, confusion)
-     * 
-     * See STRESS_METRICS.md for full scientific documentation
+     * Calculate emotion-based discount multiplier
+     * Higher stress/frustration = higher discount
      */
-    const calculateStress = (prosody: any) => {
+    const calculateEmotionDiscount = (prosody: any) => {
         if (!prosody?.scores) return 0;
 
-        console.group('🧠 Weighted Emotional Index Calculation');
-
-        // Component 1: Distress (Primary Burnout Indicator)
-        const distressEmotions = ['distress', 'sadness', 'frustration', 'disappointment'];
-        const distressScore = Math.max(
-            ...distressEmotions.map(e => prosody.scores[e] || prosody.scores[e.charAt(0).toUpperCase() + e.slice(1)] || 0)
+        const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
+        const maxStress = Math.max(
+            ...stressEmotions.map(e => prosody.scores[e] || 0)
         );
 
-        // Component 2: Anxiety (Secondary Stress Signal)
-        const anxietyEmotions = ['anxiety', 'fear', 'nervousness', 'worry'];
-        const anxietyScore = Math.max(
-            ...anxietyEmotions.map(e => prosody.scores[e] || prosody.scores[e.charAt(0).toUpperCase() + e.slice(1)] || 0)
-        );
-
-        // Component 3: Overload (Cognitive Fatigue)
-        const overloadEmotions = ['tiredness', 'boredom', 'confusion'];
-        const overloadScore = Math.max(
-            ...overloadEmotions.map(e => prosody.scores[e] || prosody.scores[e.charAt(0).toUpperCase() + e.slice(1)] || 0)
-        );
-
-        // Apply Weighted Emotional Index formula
-        const stressTotal = (distressScore * 0.5) + (anxietyScore * 0.3) + (overloadScore * 0.2);
-        
-        // Normalize to 0-100 scale
-        const finalScore = Math.min(Math.round(stressTotal * 100), 100);
-
-        console.log(`📊 Component Scores:`);
-        console.log(`   Distress: ${(distressScore * 100).toFixed(1)}% (weight: 0.5)`);
-        console.log(`   Anxiety: ${(anxietyScore * 100).toFixed(1)}% (weight: 0.3)`);
-        console.log(`   Overload: ${(overloadScore * 100).toFixed(1)}% (weight: 0.2)`);
-        console.log(`🎯 Final Stress Score: ${finalScore}/100`);
-        console.groupEnd();
-
-        return finalScore;
+        // Convert to discount percentage (0-25%)
+        return Math.min(Math.round(maxStress * 25), 25);
     };
 
     const startAudioCapture = useCallback(async (socket: any) => {
@@ -176,22 +142,12 @@ export const useHume = () => {
                             timestamp: Date.now()
                         }]);
 
-                        // Calculate Stress from User Message
+                        // Calculate emotion discount from User Message
                         if (msg.models?.prosody) {
-                            const score = calculateStress(msg.models.prosody);
-                            console.log('Calculated stress score:', score, 'from prosody:', msg.models.prosody);
-                            setStressScore(score);
+                            const discount = calculateEmotionDiscount(msg.models.prosody);
+                            console.log('Calculated emotion discount:', discount, '%');
+                            setEmotionData(msg.models.prosody.scores || {});
                             setEmotions(msg.models.prosody.scores || {});
-                            
-                            // Store dominant emotion for audit trail
-                            const dominantEmotion = Object.entries(msg.models.prosody.scores || {})
-                                .sort(([, a]: any, [, b]: any) => b - a)[0];
-                            if (dominantEmotion) {
-                                const [emotion, emotionScore] = dominantEmotion as [string, number];
-                                useAuraStore.getState().setCurrentEmotion(
-                                    `${emotion} (${(emotionScore * 100).toFixed(0)}%)`
-                                );
-                            }
                         }
                     }
                 }
@@ -225,89 +181,59 @@ export const useHume = () => {
                 const toolCallId = msg.toolCallId || msg.tool_call_id;
                 const toolParams = msg.parameters;
 
-                console.warn('!!! HUME TOOL CALL RECEIVED !!!', toolName, toolParams);
+                console.log('VORA TOOL CALL:', toolName, toolParams);
 
-                if (toolName === 'end_call' && toolCallId) {
-                    console.warn('[AURA TOOL] END_CALL triggered by AI');
-                    
-                    // Send tool response first
-                    if (socketRef.current?.sendToolResponseMessage) {
-                        socketRef.current.sendToolResponseMessage({
-                            type: 'tool_response',
-                            toolCallId: toolCallId,
-                            content: 'Ending session. Goodbye!'
+                switch (toolName) {
+                    case 'filter_products':
+                        useMarketStore.getState().setFilters({
+                            category: toolParams.category,
+                            color: toolParams.color,
+                            maxPrice: toolParams.max_price
                         });
-                    } else if (socketRef.current?.sendToolResponse) {
-                        socketRef.current.sendToolResponse({
-                            type: 'tool_response',
-                            tool_call_id: toolCallId,
-                            content: 'Ending session. Goodbye!'
-                        });
-                    }
-                    
-                    // End session after brief delay
-                    setTimeout(() => {
-                        stopAudioCapture();
-                        if (socketRef.current) {
-                            socketRef.current.close();
-                            socketRef.current = null;
+                        
+                        if (socketRef.current?.sendToolResponse) {
+                            socketRef.current.sendToolResponse({
+                                toolCallId,
+                                content: `Filtered products by ${JSON.stringify(toolParams)}`
+                            });
                         }
-                        setStatus('IDLE');
-                        setMessages([]);
-                    }, 1000);
-                }
+                        break;
 
-                if (toolName === 'manage_burnout' && toolCallId) {
-                    let params: any = {};
-                    try {
-                        params = typeof toolParams === 'string'
-                            ? JSON.parse(toolParams)
-                            : toolParams;
-                    } catch (e) {
-                        console.error('Failed to parse tool parameters', e);
-                    }
+                    case 'add_to_cart':
+                        const product = useMarketStore.getState().products
+                            .find(p => p._id === toolParams.product_id);
+                        if (product) {
+                            useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
+                            
+                            if (socketRef.current?.sendToolResponse) {
+                                socketRef.current.sendToolResponse({
+                                    toolCallId,
+                                    content: `Added ${product.title} to cart`
+                                });
+                            }
+                        }
+                        break;
 
-                    const taskId = params.task_id || params.taskId;
-                    let adjustmentType = params.adjustment_type || params.adjustmentType || params.new_status || params.status || 'postpone';
+                    case 'trigger_checkout':
+                        useMarketStore.getState().openCheckout();
+                        
+                        if (socketRef.current?.sendToolResponse) {
+                            socketRef.current.sendToolResponse({
+                                toolCallId,
+                                content: 'Opening checkout'
+                            });
+                        }
+                        break;
 
-                    const isComplete = ['complete', 'completed', 'finished', 'done', 'finish'].includes(adjustmentType.toLowerCase());
-                    const isPostpone = ['postpone', 'postponed', 'later', 'move'].includes(adjustmentType.toLowerCase());
-                    const isCancel = ['cancel', 'cancelled', 'drop', 'remove'].includes(adjustmentType.toLowerCase());
-
-                    if (isComplete) adjustmentType = 'complete';
-                    else if (isPostpone) adjustmentType = 'postpone';
-                    else if (isCancel) adjustmentType = 'cancel';
-
-                    console.warn(`[AURA TOOL] SETTING PENDING ACTION: task=${taskId}, action=${adjustmentType}`);
-
-                    // Get task name for modal
-                    const task = useAuraStore.getState().tasks.find(t => String(t.id) === String(taskId));
-                    const taskName = task?.title || 'Unknown Task';
-
-                    // Set pending action instead of immediate execution
-                    useAuraStore.getState().setPendingAction({
-                        taskId,
-                        taskName,
-                        actionType: adjustmentType as any,
-                        timestamp: Date.now()
-                    });
-
-                    const result = { success: true, message: `Preparing to ${adjustmentType} "${taskName}"...` };
-                    console.warn(`[AURA TOOL] RESULT:`, result.message);
-
-                    if (socketRef.current?.sendToolResponseMessage) {
-                        socketRef.current.sendToolResponseMessage({
-                            type: 'tool_response',
-                            toolCallId: toolCallId,
-                            content: result.message
-                        });
-                    } else if (socketRef.current?.sendToolResponse) {
-                        socketRef.current.sendToolResponse({
-                            type: 'tool_response',
-                            tool_call_id: toolCallId,
-                            content: result.message
-                        });
-                    }
+                    case 'apply_discount':
+                        // Implement discount logic here
+                        if (socketRef.current?.sendToolResponse) {
+                            socketRef.current.sendToolResponse({
+                                toolCallId,
+                                content: `Applied discount: ${toolParams.reasoning}`
+                            });
+                        }
+                        break;
                 }
                 break;
 
@@ -320,39 +246,34 @@ export const useHume = () => {
                 console.log('DEBUG: Received message of type:', msg.type, msg);
                 break;
         }
-    }, [setStressScore, setVoiceState, stopAudioCapture]);
+    }, [setEmotionData, stopAudioCapture]);
 
-    // Update Hume context whenever tasks change
+    // Update Hume context with product information
     useEffect(() => {
         if (socketRef.current && status === 'ACTIVE') {
-            const taskContext = tasks.map((t: Task) =>
-                `- [${t.id}] ${t.title} (${t.priority} priority, status: ${t.status}, due: ${t.day})`
+            const productContext = products.slice(0, 5).map(p => 
+                `- ${p.title} ($${p.price}) - ${p.category}`
             ).join('\n');
 
-            // ONLY sync if the task state has actually changed to avoid socket spam/closure
-            if (taskContext === lastSyncedTasksRef.current) return;
-            lastSyncedTasksRef.current = taskContext;
-
             const baseInstructions = `
-You are Aura, an empathic productivity assistant.
+You are Vora, an empathic shopping assistant.
 CORE RULES:
-1. You MUST use 'manage_burnout' for ANY status change. Never just talk about it—do it!
-2. ACTION MAPPING:
-   - User says "Finished", "Done", "Fixed", or "Checked off" -> Use 'complete'.
-   - User says "Later", "Tomorrow", or "Can't do it now" -> Use 'postpone'.
-3. MANDATORY: The tool 'manage_burnout' is your ONLY way to change tasks. Even if the user sounds happy, use it to mark things as 'complete'.
-4. Celebrate! When a user finishes a task, call the tool first, then tell them how proud you are.
-5. Refer to tasks by their IDs (e.g., "Task 1").
+1. Help users find products through voice commands
+2. Use filter_products to filter by category, color, or price
+3. Use add_to_cart to add products to cart
+4. Use trigger_checkout to open checkout
+5. Offer empathetic discounts when users sound stressed
+6. Be conversational and helpful, not pushy
 `;
 
-            const fullPrompt = `${baseInstructions}\n\nCURRENT TASKS:\n${taskContext}`;
+            const fullPrompt = `${baseInstructions}\n\nAVAILABLE PRODUCTS:\n${productContext}`;
 
-            console.warn('--- AURA: Syncing Tasks to Hume ---');
+            console.log('Syncing products to Hume');
             socketRef.current.sendSessionSettings({
                 system_prompt: fullPrompt
             });
         }
-    }, [tasks, status]);
+    }, [products, status]);
 
     const handleError = useCallback((err: Event | Error) => {
         console.error('Hume socket error:', err);
@@ -471,6 +392,7 @@ CORE RULES:
         toggleMic,
         toggleSpeaker,
         updateSessionSettings,
-        emotions
+        emotions,
+        voiceState
     };
 };
