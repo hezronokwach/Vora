@@ -226,11 +226,22 @@ export const useHume = () => {
                         break;
 
                     case 'apply_discount':
-                        // Implement discount logic here
+                        const { cart, emotionData } = useMarketStore.getState();
+                        const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
+                        const maxStress = Math.max(...stressEmotions.map(e => emotionData[e] || 0));
+                        const discountPercentage = Math.min(Math.round(maxStress * 25), 25);
+                        
+                        if (discountPercentage > 0) {
+                            // Apply discount logic here - could update cart prices or add discount code
+                            console.log(`Applying ${discountPercentage}% emotion discount`);
+                        }
+                        
                         if (socketRef.current?.sendToolResponse) {
                             socketRef.current.sendToolResponse({
                                 toolCallId,
-                                content: `Applied discount: ${toolParams.reasoning}`
+                                content: discountPercentage > 0 
+                                    ? `Applied ${discountPercentage}% empathy discount: ${toolParams.reasoning}`
+                                    : "No discount needed - you seem to be doing well!"
                             });
                         }
                         break;
