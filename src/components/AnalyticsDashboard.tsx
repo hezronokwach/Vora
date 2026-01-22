@@ -22,9 +22,9 @@ export const AnalyticsDashboard = () => {
   const currentEmotionScore = Math.max(...stressEmotions.map(e => emotionData[e] || 0)) * 100;
   const currentDiscount = Math.min(Math.round(currentEmotionScore * 0.25), 25);
 
-  // Update session history every 10 seconds
+  // Update session history every 10 seconds and store in Firebase
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (Object.keys(emotionData).length > 0) {
         const newDataPoint: SessionData = {
           time: new Date().toLocaleTimeString('en-US', { 
@@ -37,6 +37,20 @@ export const AnalyticsDashboard = () => {
         };
 
         setSessionHistory(prev => [...prev.slice(-19), newDataPoint]);
+        
+        // Store emotion snapshot in Firebase
+        try {
+          const { addEmotionSnapshot, generateSessionId } = await import('@/lib/firebaseService');
+          const sessionId = sessionStorage.getItem('voraSessionId') || (() => {
+            const newId = generateSessionId();
+            sessionStorage.setItem('voraSessionId', newId);
+            return newId;
+          })();
+          
+          await addEmotionSnapshot(sessionId, emotionData, cartValue, currentDiscount);
+        } catch (error) {
+          console.error('Error storing emotion snapshot:', error);
+        }
       }
     }, 10000);
 
