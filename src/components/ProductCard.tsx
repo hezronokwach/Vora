@@ -33,6 +33,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.2 }}
+      data-testid="product-card"
       className="glass-card p-4 rounded-2xl group cursor-pointer"
     >
       <div className="relative overflow-hidden rounded-xl">
