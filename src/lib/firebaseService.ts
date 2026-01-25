@@ -46,8 +46,8 @@ export const createOrder = async (orderData: Omit<Order, 'id' | 'timestamp'>) =>
     });
     return docRef.id;
   } catch (error) {
-    console.error('Error creating order:', error);
-    throw error;
+    console.warn('Error creating order:', error);
+    return null;
   }
 };
 
@@ -123,6 +123,6 @@ export const addEmotionSnapshot = async (
       ...snapshot,
     });
   } catch (error) {
-    console.error('Error adding emotion snapshot:', error);
+    console.warn('Error adding emotion snapshot:', error);
   }
 };

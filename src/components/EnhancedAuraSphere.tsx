@@ -73,7 +73,7 @@ export const EnhancedAuraSphere = () => {
     };
 
     return (
-        <div className="relative flex items-center justify-center w-64 h-64">
+        <div className="relative flex items-center justify-center w-48 h-48">
             {/* Orbiting emotional indicators */}
             <motion.div
                 animate={{ rotate: 360 }}
@@ -83,13 +83,13 @@ export const EnhancedAuraSphere = () => {
                 {[0, 120, 240].map((angle, i) => (
                     <motion.div
                         key={i}
-                        className="absolute w-3 h-3 rounded-full"
+                        className="absolute w-2 h-2 rounded-full"
                         style={{
                             backgroundColor: config.baseColor,
                             left: '50%',
                             top: '50%',
-                            transform: `rotate(${angle}deg) translateX(100px) translateY(-50%)`,
-                            boxShadow: `0 0 20px ${config.glowColor}`,
+                            transform: `rotate(${angle}deg) translateX(75px) translateY(-50%)`,
+                            boxShadow: `0 0 15px ${config.glowColor}`,
                         }}
                         animate={{
                             scale: voiceState === 'listening' ? [1, 1.5, 1] : 1,
@@ -119,7 +119,7 @@ export const EnhancedAuraSphere = () => {
                         repeat: Infinity,
                         ease: "linear",
                     }}
-                    className="absolute w-56 h-56 rounded-full opacity-30"
+                    className="absolute w-42 h-42 rounded-full opacity-30"
                     style={{ background: `linear-gradient(45deg, ${config.baseColor}, ${config.secondaryColor})` }}
                 />
 
@@ -133,12 +133,12 @@ export const EnhancedAuraSphere = () => {
                         repeat: Infinity,
                         ease: "easeInOut",
                     }}
-                    className="absolute w-40 h-40 rounded-full opacity-40 blur-xl"
+                    className="absolute w-30 h-30 rounded-full opacity-40 blur-xl"
                     style={{ backgroundColor: config.baseColor }}
                 />
 
                 {/* Core Sphere */}
-                <div className="relative w-32 h-32 rounded-full glass border border-white/20 flex items-center justify-center shadow-2xl overflow-hidden ring-1 ring-white/10">
+                <div className="relative w-24 h-24 rounded-full glass border border-white/20 flex items-center justify-center shadow-2xl overflow-hidden ring-1 ring-white/10">
                     <motion.div
                         className="absolute inset-0 opacity-20"
                         animate={{
@@ -159,7 +159,7 @@ export const EnhancedAuraSphere = () => {
                             exit={{ opacity: 0, y: -5 }}
                             className="text-[10px] font-bold uppercase tracking-[0.3em] z-10"
                         >
-                            {voiceState === 'idle' ? 'Aura' : voiceState}
+                            {voiceState === 'idle' ? 'Vora' : voiceState}
                         </motion.span>
                     </AnimatePresence>
                 </div>

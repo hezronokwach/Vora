@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { urlFor } from '@/lib/sanity';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
@@ -8,15 +9,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const { items, emotionDiscount = 0 } = await request.json();
+    
+    console.log('Checkout API - Items received:', items);
+    console.log('Checkout API - Emotion discount:', emotionDiscount);
 
     const lineItems = items.map((item: any) => {
       const unitAmount = Math.round(item.price * 100 * (1 - emotionDiscount / 100));
+      console.log(`Processing item: ${item.title}, price: $${item.price}, unit_amount: ${unitAmount}`);
+      
+      // Convert Sanity image to URL string
+      const imageUrl = item.image ? urlFor(item.image).url() : null;
+      console.log('Image URL:', imageUrl);
+      
       return {
         price_data: {
           currency: 'usd',
           product_data: {
             name: item.title,
-            images: item.image ? [item.image] : [],
+            images: imageUrl ? [imageUrl] : [],
           },
           unit_amount: unitAmount,
         },

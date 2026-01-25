@@ -5,13 +5,10 @@ import { useMarketStore } from '@/store/useMarketStore';
 import { urlFor } from '@/lib/sanity';
 import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
 
-interface CartSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+interface CartSidebarProps {}
 
-export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
-  const { cart, updateCartQuantity, removeFromCart, openCheckout, emotionData } = useMarketStore();
+export const CartSidebar = () => {
+  const { cart, cartOpen, setCartOpen, updateCartQuantity, removeFromCart, setCheckoutOpen, emotionData, loadingStates, setLoading } = useMarketStore();
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
@@ -23,19 +20,19 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
   const total = subtotal - discountAmount;
 
   const handleCheckout = () => {
-    openCheckout();
-    onClose();
+    setCheckoutOpen(true);
+    setCartOpen(false);
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {cartOpen && (
         <>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => setCartOpen(false)}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
           />
           
@@ -45,6 +42,7 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 h-full w-96 glass-card border-l border-white/10 z-50 flex flex-col"
+            data-testid="cart-sidebar"
           >
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
@@ -53,7 +51,7 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
                   Cart ({cart.length})
                 </h2>
                 <button
-                  onClick={onClose}
+                  onClick={() => setCartOpen(false)}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                 >
                   <X size={20} className="text-white/70" />
@@ -110,10 +108,20 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
                           </div>
                           
                           <button
-                            onClick={() => removeFromCart(item._id)}
-                            className="text-rose-400 hover:text-rose-300 text-xs transition-colors"
+                            onClick={() => {
+                              setLoading(`remove-${item._id}`, true);
+                              setTimeout(() => {
+                                removeFromCart(item._id);
+                                setLoading(`remove-${item._id}`, false);
+                              }, 200);
+                            }}
+                            disabled={loadingStates[`remove-${item._id}`]}
+                            className="text-rose-400 hover:text-rose-300 disabled:text-rose-400/50 text-xs transition-colors flex items-center gap-1"
                           >
-                            Remove
+                            {loadingStates[`remove-${item._id}`] && (
+                              <div className="w-3 h-3 border border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                            )}
+                            {loadingStates[`remove-${item._id}`] ? 'Removing...' : 'Remove'}
                           </button>
                         </div>
                       </div>

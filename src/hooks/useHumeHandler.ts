@@ -84,7 +84,6 @@ export const useHume = () => {
             };
 
             recorder.onerror = (e) => {
-                console.error('MediaRecorder error:', e);
                 setError('Microphone error');
             };
 
@@ -93,9 +92,7 @@ export const useHume = () => {
             setIsMicMuted(false);
             setVoiceState('listening');
 
-            console.log('Audio capture started');
         } catch (err: any) {
-            console.error('Failed to start audio capture:', err);
             setError(err.message);
         }
     }, [setVoiceState]);
@@ -107,12 +104,10 @@ export const useHume = () => {
             recorderRef.current = null;
             setIsMicMuted(true);
             setVoiceState('idle');
-            console.log('Audio capture stopped');
         }
     }, [setVoiceState]);
 
     const handleOpen = useCallback(async () => {
-        console.log('Hume socket opened');
         setStatus('ACTIVE');
 
         const player = new EVIWebAudioPlayer();
@@ -121,8 +116,6 @@ export const useHume = () => {
     }, []);
 
     const handleMessage = useCallback(async (msg: any) => {
-        console.log('Hume message:', msg.type);
-
         switch (msg.type) {
             case 'audio_output':
                 if (playerRef.current && !isSpeakerMutedRef.current) {
@@ -145,7 +138,6 @@ export const useHume = () => {
                         // Calculate emotion discount from User Message
                         if (msg.models?.prosody) {
                             const discount = calculateEmotionDiscount(msg.models.prosody);
-                            console.log('Calculated emotion discount:', discount, '%');
                             setEmotionData(msg.models.prosody.scores || {});
                             setEmotions(msg.models.prosody.scores || {});
                         }
@@ -169,7 +161,6 @@ export const useHume = () => {
                 break;
 
             case 'user_interruption':
-                console.log('User interrupted');
                 if (playerRef.current) {
                     playerRef.current.stop();
                 }
@@ -179,103 +170,93 @@ export const useHume = () => {
             case 'tool_call':
                 const toolName = msg.name;
                 const toolCallId = msg.toolCallId || msg.tool_call_id;
-                const toolParams = msg.parameters;
+                const toolParams = JSON.parse(msg.parameters);
 
-                console.log('VORA TOOL CALL:', toolName, toolParams);
+                try {
+                    let toolResult = '';
 
-                switch (toolName) {
-                    case 'filter_products':
-                        useMarketStore.getState().setFilters({
-                            category: toolParams.category,
-                            color: toolParams.color,
-                            maxPrice: toolParams.max_price
+                    switch (toolName) {
+                        case 'filter_products':
+                            useMarketStore.getState().setFilters({
+                                category: toolParams.category,
+                                color: toolParams.color,
+                                maxPrice: toolParams.max_price
+                            });
+                            
+                            const filteredCount = useMarketStore.getState().products.length;
+                            toolResult = `Successfully filtered products. Found ${filteredCount} items matching the criteria.`;
+                            break;
+
+                        case 'add_to_cart':
+                            let product = useMarketStore.getState().products
+                                .find(p => p._id === toolParams.product_id);
+                            
+                            if (!product) {
+                                product = useMarketStore.getState().products
+                                    .find(p => p.title.toLowerCase().includes(toolParams.product_id.toLowerCase()));
+                            }
+                            
+                            if (product) {
+                                useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
+                                toolResult = `Added ${product.title} to cart (quantity: ${toolParams.quantity || 1})`;
+                            } else {
+                                throw new Error(`Product not found: ${toolParams.product_id}`);
+                            }
+                            break;
+
+                        case 'trigger_checkout':
+                            useMarketStore.getState().setCheckoutOpen(true);
+                            toolResult = 'Checkout modal opened successfully';
+                            break;
+
+                        case 'apply_discount':
+                            toolResult = 'Empathy discount applied successfully';
+                            break;
+
+                        case 'collect_address':
+                            const formattedAddress = toolParams.address
+                                .replace(/\bone twenty three\b/gi, '123')
+                                .replace(/\bone hundred twenty three\b/gi, '123')
+                                .replace(/\bone two three\b/gi, '123')
+                                .split(' ')
+                                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(' ');
+                            
+                            useMarketStore.getState().setDeliveryAddress(formattedAddress);
+                            toolResult = `Delivery address saved: ${formattedAddress}`;
+                            break;
+
+                        case 'navigate_to_orders':
+                            setTimeout(() => {
+                                window.location.href = '/orders';
+                            }, 2000);
+                            toolResult = 'Navigating to your orders page';
+                            break;
+
+                        default:
+                            throw new Error(`Unknown tool: ${toolName}`);
+                    }
+
+                    if (socketRef.current) {
+                        socketRef.current.sendToolResponseMessage({
+                            toolCallId: toolCallId,
+                            content: toolResult
                         });
-                        
-                        let filterResponse = 'I\'ve filtered the products';
-                        if (toolParams.category) filterResponse += ` to show ${toolParams.category}`;
-                        if (toolParams.color) filterResponse += ` in ${toolParams.color}`;
-                        if (toolParams.max_price) filterResponse += ` under $${toolParams.max_price}`;
-                        filterResponse += '. Take a look at what I found for you!';
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: filterResponse
-                            });
-                        }
-                        break;
+                    }
 
-                    case 'add_to_cart':
-                        const product = useMarketStore.getState().products
-                            .find(p => p._id === toolParams.product_id);
-                        if (product) {
-                            useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
-                            
-                            const quantity = toolParams.quantity || 1;
-                            const cartResponse = `Perfect! I've added ${quantity > 1 ? quantity + ' ' : ''}${product.title} to your cart. ${product.stock < 5 ? 'Good choice - there are only a few left!' : 'Great choice!'}`;
-                            
-                            if (socketRef.current?.sendToolResponse) {
-                                socketRef.current.sendToolResponse({
-                                    toolCallId,
-                                    content: cartResponse
-                                });
-                            }
-                        } else {
-                            if (socketRef.current?.sendToolResponse) {
-                                socketRef.current.sendToolResponse({
-                                    toolCallId,
-                                    content: "I'm sorry, I couldn't find that specific item. Would you like me to show you similar products?"
-                                });
-                            }
-                        }
-                        break;
-
-                    case 'trigger_checkout':
-                        const { cart } = useMarketStore.getState();
-                        useMarketStore.getState().openCheckout();
-                        
-                        const checkoutResponse = cart.length > 0 
-                            ? `I'm opening checkout for you now. You have ${cart.length} item${cart.length > 1 ? 's' : ''} ready to go!`
-                            : "Your cart is empty right now. Would you like me to help you find something special?";
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: checkoutResponse
-                            });
-                        }
-                        break;
-
-                    case 'apply_discount':
-                        const { cart: currentCart, emotionData } = useMarketStore.getState();
-                        const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
-                        const maxStress = Math.max(...stressEmotions.map(e => emotionData[e] || 0));
-                        const discountPercentage = Math.min(Math.round(maxStress * 25), 25);
-                        
-                        let discountResponse;
-                        if (discountPercentage > 0) {
-                            discountResponse = `I can sense you might be having a tough time, and I want to help. I'm applying a ${discountPercentage}% comfort discount to your order. ${toolParams.reasoning || 'Sometimes we all need a little extra care.'} 💙`;
-                        } else {
-                            discountResponse = "You seem to be doing well today! That makes me happy. While you don't need a discount right now, I'm here if anything changes.";
-                        }
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: discountResponse
-                            });
-                        }
-                        break;
+                } catch (error: any) {
+                    if (socketRef.current) {
+                        socketRef.current.sendToolErrorMessage({
+                            toolCallId: toolCallId,
+                            error: "Tool execution failed",
+                            content: error.message
+                        });
+                    }
                 }
                 break;
 
             case 'error':
-                console.error('Hume message error:', msg.message);
                 setError(msg.message);
-                break;
-
-            default:
-                console.log('DEBUG: Received message of type:', msg.type, msg);
                 break;
         }
     }, [setEmotionData, stopAudioCapture]);
@@ -319,7 +300,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
 
             const fullPrompt = `${baseInstructions}\n\nAVAILABLE PRODUCTS:\n${productContext}`;
 
-            console.log('Syncing enhanced Vora personality to Hume');
             socketRef.current.sendSessionSettings({
                 system_prompt: fullPrompt
             });
@@ -327,13 +307,11 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     }, [products, status]);
 
     const handleError = useCallback((err: Event | Error) => {
-        console.error('Hume socket error:', err);
         setError('Connection error');
         setStatus('ERROR');
     }, []);
 
     const handleClose = useCallback((e: any) => {
-        console.log('Hume socket closed:', e);
         setStatus('IDLE');
         setVoiceState('idle');
 
@@ -350,7 +328,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     const startSession = useCallback(async (options?: { configId?: string; voiceId?: string; language?: string }) => {
         try {
             if (socketRef.current) {
-                console.log('Session already active');
                 return;
             }
 
@@ -384,7 +361,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
             socket.on('close', handleClose);
 
         } catch (err: any) {
-            console.error('Failed to start Hume session:', err);
             setError(err.message);
             setStatus('ERROR');
         }
@@ -405,13 +381,11 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     const updateSessionSettings = useCallback((settings: { voiceId?: string; systemPrompt?: string; context?: string }) => {
         if (socketRef.current) {
             socketRef.current.sendSessionSettings(settings);
-            console.log('Session settings updated:', settings);
         }
     }, []);
 
     const toggleMic = useCallback(async () => {
         if (!socketRef.current) {
-            console.log('No active session');
             return;
         }
 

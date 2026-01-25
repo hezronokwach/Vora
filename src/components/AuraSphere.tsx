@@ -139,7 +139,7 @@ export const AuraSphere = () => {
                             exit={{ opacity: 0, y: -5 }}
                             className="text-[10px] font-bold uppercase tracking-[0.3em] z-10"
                         >
-                            {voiceState === 'idle' ? 'Aura' : voiceState}
+                            {voiceState === 'idle' ? 'Vora' : voiceState}
                         </motion.span>
                     </AnimatePresence>
                 </div>

@@ -7,7 +7,8 @@ import { ProductCard } from './ProductCard';
 export const ProductGrid = () => {
   const products = useMarketStore(state => state.products);
   const filters = useMarketStore(state => state.filters);
-
+  const clearFilters = useMarketStore(state => state.clearFilters);
+  
   const filteredProducts = products.filter(product => {
     if (filters.category && product.category !== filters.category) return false;
     if (filters.maxPrice && product.price > filters.maxPrice) return false;
@@ -28,7 +29,7 @@ export const ProductGrid = () => {
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            onClick={() => useMarketStore.getState().clearFilters()}
+            onClick={clearFilters}
             className="text-sm text-calm hover:text-calm/80 transition-colors"
           >
             Clear Filters
@@ -38,6 +39,7 @@ export const ProductGrid = () => {
 
       <motion.div 
         layout
+        data-testid="product-grid"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       >
         <AnimatePresence mode="popLayout">
@@ -61,7 +63,7 @@ export const ProductGrid = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => useMarketStore.getState().clearFilters()}
+              onClick={clearFilters}
               className="px-4 py-2 bg-calm/20 hover:bg-calm/30 text-calm border border-calm/30 rounded-xl transition-colors"
             >
               Clear Filters

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aura | Empathic Productivity",
+  title: "Vora | Empathic Shopping",
   description: "Your voice-first, empathic productivity assistant designed to help you focus and manage burnout.",
   icons: {
     icon: "/logo.png",
