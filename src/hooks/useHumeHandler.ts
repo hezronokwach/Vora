@@ -179,93 +179,84 @@ export const useHume = () => {
             case 'tool_call':
                 const toolName = msg.name;
                 const toolCallId = msg.toolCallId || msg.tool_call_id;
-                const toolParams = msg.parameters;
+                const toolParams = JSON.parse(msg.parameters); // Parse the JSON string
 
                 console.log('VORA TOOL CALL:', toolName, toolParams);
 
-                switch (toolName) {
-                    case 'filter_products':
-                        useMarketStore.getState().setFilters({
-                            category: toolParams.category,
-                            color: toolParams.color,
-                            maxPrice: toolParams.max_price
+                try {
+                    let toolResult = '';
+
+                    switch (toolName) {
+                        case 'filter_products':
+                            console.log('🔍 Before filter - Current filters:', useMarketStore.getState().filters);
+                            console.log('🔍 Tool params received:', toolParams);
+                            
+                            useMarketStore.getState().setFilters({
+                                category: toolParams.category,
+                                color: toolParams.color,
+                                maxPrice: toolParams.max_price
+                            });
+                            
+                            console.log('🔍 After filter - New filters:', useMarketStore.getState().filters);
+                            
+                            const filteredCount = useMarketStore.getState().products.length;
+                            toolResult = `Successfully filtered products. Found ${filteredCount} items matching the criteria.`;
+                            console.log('✅ Products filtered successfully');
+                            break;
+
+                        case 'add_to_cart':
+                            // First try to find by ID, then by title
+                            let product = useMarketStore.getState().products
+                                .find(p => p._id === toolParams.product_id);
+                            
+                            if (!product) {
+                                // Fallback: search by title
+                                product = useMarketStore.getState().products
+                                    .find(p => p.title.toLowerCase().includes(toolParams.product_id.toLowerCase()));
+                            }
+                            
+                            if (product) {
+                                useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
+                                toolResult = `Added ${product.title} to cart (quantity: ${toolParams.quantity || 1})`;
+                                console.log('✅ Product added to cart:', product.title);
+                            } else {
+                                throw new Error(`Product not found: ${toolParams.product_id}`);
+                            }
+                            break;
+
+                        case 'trigger_checkout':
+                            useMarketStore.getState().setCheckoutOpen(true);
+                            toolResult = 'Checkout modal opened successfully';
+                            console.log('✅ Checkout modal opened');
+                            break;
+
+                        case 'apply_discount':
+                            toolResult = 'Empathy discount applied successfully';
+                            console.log('✅ Empathy discount applied');
+                            break;
+
+                        default:
+                            throw new Error(`Unknown tool: ${toolName}`);
+                    }
+
+                    // Send success response back to EVI
+                    if (socketRef.current) {
+                        socketRef.current.sendToolResponseMessage({
+                            toolCallId: toolCallId,
+                            content: toolResult
                         });
-                        
-                        let filterResponse = 'I\'ve filtered the products';
-                        if (toolParams.category) filterResponse += ` to show ${toolParams.category}`;
-                        if (toolParams.color) filterResponse += ` in ${toolParams.color}`;
-                        if (toolParams.max_price) filterResponse += ` under $${toolParams.max_price}`;
-                        filterResponse += '. Take a look at what I found for you!';
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: filterResponse
-                            });
-                        }
-                        break;
+                    }
 
-                    case 'add_to_cart':
-                        const product = useMarketStore.getState().products
-                            .find(p => p._id === toolParams.product_id);
-                        if (product) {
-                            useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
-                            
-                            const quantity = toolParams.quantity || 1;
-                            const cartResponse = `Perfect! I've added ${quantity > 1 ? quantity + ' ' : ''}${product.title} to your cart. ${product.stock < 5 ? 'Good choice - there are only a few left!' : 'Great choice!'}`;
-                            
-                            if (socketRef.current?.sendToolResponse) {
-                                socketRef.current.sendToolResponse({
-                                    toolCallId,
-                                    content: cartResponse
-                                });
-                            }
-                        } else {
-                            if (socketRef.current?.sendToolResponse) {
-                                socketRef.current.sendToolResponse({
-                                    toolCallId,
-                                    content: "I'm sorry, I couldn't find that specific item. Would you like me to show you similar products?"
-                                });
-                            }
-                        }
-                        break;
-
-                    case 'trigger_checkout':
-                        const { cart } = useMarketStore.getState();
-                        useMarketStore.getState().openCheckout();
-                        
-                        const checkoutResponse = cart.length > 0 
-                            ? `I'm opening checkout for you now. You have ${cart.length} item${cart.length > 1 ? 's' : ''} ready to go!`
-                            : "Your cart is empty right now. Would you like me to help you find something special?";
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: checkoutResponse
-                            });
-                        }
-                        break;
-
-                    case 'apply_discount':
-                        const { cart: currentCart, emotionData } = useMarketStore.getState();
-                        const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
-                        const maxStress = Math.max(...stressEmotions.map(e => emotionData[e] || 0));
-                        const discountPercentage = Math.min(Math.round(maxStress * 25), 25);
-                        
-                        let discountResponse;
-                        if (discountPercentage > 0) {
-                            discountResponse = `I can sense you might be having a tough time, and I want to help. I'm applying a ${discountPercentage}% comfort discount to your order. ${toolParams.reasoning || 'Sometimes we all need a little extra care.'} 💙`;
-                        } else {
-                            discountResponse = "You seem to be doing well today! That makes me happy. While you don't need a discount right now, I'm here if anything changes.";
-                        }
-                        
-                        if (socketRef.current?.sendToolResponse) {
-                            socketRef.current.sendToolResponse({
-                                toolCallId,
-                                content: discountResponse
-                            });
-                        }
-                        break;
+                } catch (error: any) {
+                    // Send error response back to EVI
+                    if (socketRef.current) {
+                        socketRef.current.sendToolErrorMessage({
+                            toolCallId: toolCallId,
+                            error: "Tool execution failed",
+                            content: error.message
+                        });
+                    }
+                    console.error('❌ Tool error:', error);
                 }
                 break;
 
