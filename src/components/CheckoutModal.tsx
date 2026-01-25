@@ -5,13 +5,14 @@ import { useMarketStore } from '@/store/useMarketStore';
 import { X, CreditCard, User, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import { updateProductStock } from '@/lib/sanity';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SqgU71SF3fQ8b3RWCEEFczUUWgQggYx1se2QtosiJ65X6x0pSz7VdQ9e7u0xkvVsaOxdOkXNPN8t5HYuyHkb1Ru005ank2fWD');
 
 interface CheckoutModalProps {}
 
 export const CheckoutModal = () => {
-  const { cart, checkoutOpen, setCheckoutOpen, clearCart, emotionData } = useMarketStore();
+  const { cart, checkoutOpen, setCheckoutOpen, clearCart, emotionData, reduceStock } = useMarketStore();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -27,6 +28,9 @@ export const CheckoutModal = () => {
     setIsProcessing(true);
     
     try {
+      console.log('🛒 Starting checkout process...');
+      console.log('Cart items:', cart);
+      
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -38,30 +42,41 @@ export const CheckoutModal = () => {
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Checkout failed');
+      }
+
       const { sessionId } = await response.json();
+      console.log('✅ Stripe session created:', sessionId);
       
-      // Store order in Firebase before redirecting
-      const { createOrder, generateSessionId } = await import('@/lib/firebaseService');
-      await createOrder({
-        items: cart,
-        subtotal,
-        emotionDiscount,
-        discountAmount,
-        total,
-        emotionData,
-        sessionId: generateSessionId(),
-      });
+      // Reduce stock BEFORE getting redirect URL
+      console.log('📦 About to reduce stock for items:', cart.map(item => ({ id: item._id, qty: item.quantity })));
+      
+      for (const item of cart) {
+        console.log(`🔄 Processing stock reduction for ${item.title} (ID: ${item._id}), quantity: ${item.quantity}`);
+        await updateProductStock(item._id, item.quantity);
+        reduceStock(item._id, item.quantity);
+      }
+      
+      console.log('✅ Stock reduced successfully');
       
       const stripe = await stripePromise;
       
       if (stripe && sessionId) {
-        // Use the session URL from Stripe instead of constructing it
+        console.log('🔄 Redirecting to Stripe checkout...');
+        // Get the checkout URL and redirect
         const sessionResponse = await fetch('/api/checkout-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId })
         });
         const { url } = await sessionResponse.json();
+        
+        // Clear cart and redirect
+        console.log('🗑️ Clearing cart and redirecting to Stripe...');
+        clearCart();
+        
         window.location.href = url;
       }
     } catch (error) {

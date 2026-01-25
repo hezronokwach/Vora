@@ -8,9 +8,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const { items, emotionDiscount = 0 } = await request.json();
+    
+    console.log('Checkout API - Items received:', items);
+    console.log('Checkout API - Emotion discount:', emotionDiscount);
 
     const lineItems = items.map((item: any) => {
       const unitAmount = Math.round(item.price * 100 * (1 - emotionDiscount / 100));
+      console.log(`Processing item: ${item.title}, price: $${item.price}, unit_amount: ${unitAmount}`);
+      
       return {
         price_data: {
           currency: 'usd',

@@ -44,6 +44,7 @@ interface MarketState {
   setFilterOpen: (open: boolean) => void;
   setEmotionData: (emotions: Record<string, number>) => void;
   clearCart: () => void;
+  reduceStock: (productId: string, quantity: number) => void;
   
   // Computed properties
   get cartTotal(): number;
@@ -74,11 +75,20 @@ export const useMarketStore = create<MarketState>()(
       
       addToCart: (product, quantity) => set((state) => {
         const existing = state.cart.find(item => item._id === product._id);
+        const currentQuantity = existing ? existing.quantity : 0;
+        const newQuantity = currentQuantity + quantity;
+        
+        // Check stock limit
+        if (newQuantity > product.stock) {
+          console.warn(`Cannot add ${quantity} items. Only ${product.stock - currentQuantity} available.`);
+          return state;
+        }
+        
         if (existing) {
           return {
             cart: state.cart.map(item =>
               item._id === product._id
-                ? { ...item, quantity: item.quantity + quantity }
+                ? { ...item, quantity: newQuantity }
                 : item
             )
           };
@@ -94,6 +104,13 @@ export const useMarketStore = create<MarketState>()(
         if (quantity <= 0) {
           return { cart: state.cart.filter(item => item._id !== productId) };
         }
+        
+        const product = state.cart.find(item => item._id === productId);
+        if (product && quantity > product.stock) {
+          console.warn(`Cannot set quantity to ${quantity}. Only ${product.stock} available.`);
+          return state;
+        }
+        
         return {
           cart: state.cart.map(item =>
             item._id === productId ? { ...item, quantity } : item
@@ -108,6 +125,14 @@ export const useMarketStore = create<MarketState>()(
       setEmotionData: (emotions) => set({ emotionData: emotions }),
       
       clearCart: () => set({ cart: [] }),
+      
+      reduceStock: (productId, quantity) => set((state) => ({
+        products: state.products.map(product =>
+          product._id === productId
+            ? { ...product, stock: Math.max(0, product.stock - quantity) }
+            : product
+        )
+      })),
       
       // Computed properties
       get cartTotal() {

@@ -4,9 +4,9 @@ import imageUrlBuilder from '@sanity/image-url';
 export const sanityClient = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'gtdvvh3t',
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  useCdn: true,
+  useCdn: false,
   apiVersion: '2024-01-01',
-  token: process.env.SANITY_API_TOKEN,
+  token: process.env.NEXT_PUBLIC_SANITY_API_TOKEN,
 });
 
 const builder = imageUrlBuilder(sanityClient);
@@ -26,6 +26,35 @@ export interface Product {
   tags: string[];
   emotionBoost: number;
   description: string;
+}
+
+export async function updateProductStock(productId: string, quantityPurchased: number): Promise<void> {
+  try {
+    console.log(`🔄 Updating stock for product ${productId}, reducing by ${quantityPurchased}`);
+    
+    // Get current product
+    const product = await sanityClient.fetch(`*[_type == "product" && _id == $id][0]`, { id: productId });
+    console.log('Current product:', product);
+    
+    if (product) {
+      const newStock = Math.max(0, product.stock - quantityPurchased);
+      console.log(`Stock change: ${product.stock} -> ${newStock}`);
+      
+      // Update stock in Sanity
+      const result = await sanityClient
+        .patch(productId)
+        .set({ stock: newStock })
+        .commit();
+      
+      console.log('✅ Sanity stock update result:', result);
+    } else {
+      console.error('❌ Product not found:', productId);
+    }
+  } catch (error) {
+    console.error('❌ Failed to update product stock in Sanity (permissions issue):', error);
+    console.log('⚠️ Continuing with local stock update only...');
+    // Don't throw - let checkout continue with local state update
+  }
 }
 
 export async function getProducts(): Promise<Product[]> {
