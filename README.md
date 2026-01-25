@@ -18,6 +18,8 @@ Vora responds to natural voice commands:
 - "Show me dresses under $50"
 - "Add this to my cart"
 - "I'm looking for something comfortable"
+- "Show me my orders"
+- "My address is 123 Main Street"
 - Filter products by category, color, and price through conversation
 
 ### 3. Empathic Discounts
@@ -31,6 +33,7 @@ Track your shopping patterns and emotional trends:
 - **Emotion Score Chart**: Real-time visualization of your emotional state
 - **Cart Value Tracking**: Monitor spending patterns
 - **Discount Savings**: See how much empathy saved you
+- **Order History**: View completed orders with delivery addresses
 
 ---
 
@@ -67,7 +70,7 @@ Required environment variables:
 Configure voice shopping tools following [HUME_PORTAL_SETUP.md](./HUME_PORTAL_SETUP.md):
 
 1. Create new EVI configuration
-2. Add 4 required tools (filter_products, add_to_cart, trigger_checkout, apply_discount)
+2. Add 6 required tools (filter_products, add_to_cart, trigger_checkout, apply_discount, collect_address, navigate_to_orders)
 3. Set empathetic system prompt
 4. Copy config ID to `.env`
 
@@ -122,6 +125,8 @@ npm run test:e2e
 3. Browse products with voice commands
 4. Express frustration: *"This is so expensive!"*
 5. Watch Vora offer empathetic discount
+6. Complete checkout with voice: *"My address is 123 Main Street"*
+7. Navigate to orders: *"Show me my orders"*
 
 ---
 
@@ -142,19 +147,23 @@ npm run test:e2e
 ```
 src/
 ├── app/                 # Next.js app router
+│   ├── page.tsx         # Main marketplace interface
+│   ├── orders/page.tsx  # Order history page
+│   └── api/             # Stripe checkout API routes
 ├── components/          # React components
 │   ├── ProductCard.tsx  # Product display with emotion discounts
 │   ├── CartSidebar.tsx  # Shopping cart with empathy pricing
 │   ├── VoiceController.tsx # Hume EVI integration
+│   ├── EnhancedAuraSphere.tsx # Emotion visualization sphere
 │   └── AnalyticsDashboard.tsx # Real-time emotion tracking
 ├── hooks/               # Custom React hooks
-│   └── useHumeHandler.ts # Voice command processing
+│   └── useHumeHandler.ts # Voice command processing with 6 tools
 ├── lib/                 # Utility libraries
 │   ├── sanity.ts        # CMS client
 │   ├── firebaseService.ts # Analytics persistence
 │   └── stripe.ts        # Payment processing
 ├── store/               # Zustand state management
-│   └── useMarketStore.ts # E-commerce state
+│   └── useMarketStore.ts # E-commerce state with delivery address
 └── types/               # TypeScript definitions
 ```
 
@@ -204,6 +213,8 @@ Vora follows a **Zen Design System**:
 3. Browse products with voice commands
 4. Express frustration: *"This is so expensive!"*
 5. Watch Vora offer an empathetic discount
+6. Complete purchase with voice address collection
+7. View order history: *"Show me my orders"*
 
 ---
 Developed by the Vora Team.
