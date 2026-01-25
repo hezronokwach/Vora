@@ -1,345 +1,303 @@
-# Aura AI - Project Documentation
-
-**Version**: 1.0.0  
-**Last Updated**: January 2025  
-**Status**: Production Ready
-
----
-
-## Table of Contents
-1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Core Features](#core-features)
-4. [Technical Implementation](#technical-implementation)
-5. [API Reference](#api-reference)
-6. [Deployment](#deployment)
-7. [Testing](#testing)
-8. [Contributing](#contributing)
-
----
+# Vora Project Documentation
 
 ## Overview
 
-### What is Aura AI?
-Aura AI is a voice-first productivity assistant that uses emotional intelligence to prevent burnout. Unlike traditional task managers, Aura analyzes vocal tone to detect stress and autonomously reschedules tasks before users become overwhelmed.
-
-### Key Differentiators
-- **Emotional Detection**: Real-time prosody analysis of 48 emotional signals
-- **Autonomous Actions**: AI-driven task management without manual intervention
-- **Scientific Foundation**: Weighted Emotional Index backed by burnout research
-- **User Control**: 5-second confirmation gates and comprehensive audit trails
-- **Zen Design**: Glassmorphism UI that reduces cognitive load
-
----
+Vora is an empathic e-commerce platform that uses Hume AI's Empathic Voice Interface (EVI) to detect user emotions and provide personalized shopping experiences with comfort-driven discounts.
 
 ## Architecture
 
-### System Overview
+### Frontend Stack
+- **Next.js 16** (App Router) - React framework with server-side rendering
+- **TypeScript** - Type safety and developer experience
+- **Tailwind CSS** - Utility-first styling with custom glassmorphism variants
+- **Framer Motion** - Smooth animations and transitions
+- **Zustand** - Lightweight state management with persistence
+
+### Backend Services
+- **Hume AI EVI** - Emotion detection and voice interface
+- **Sanity CMS** - Headless content management for products
+- **Stripe** - Secure payment processing
+- **Firebase Firestore** - Order persistence and analytics storage
+
+### Key Features
+- Voice-first shopping experience
+- Real-time emotion detection and analysis
+- Dynamic empathy-based discounts (0-25%)
+- Natural language product filtering
+- Voice-driven checkout and address collection
+- Emotion analytics dashboard
+
+## Project Structure
+
 ```
-┌─────────────────┐
-│   User Voice    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Hume AI EVI   │ ◄── Prosody Analysis (48 emotions)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Stress Engine   │ ◄── Weighted Emotional Index
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Tool Calling   │ ◄── manage_burnout, end_call
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Confirmation UI │ ◄── 5-second undo window
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Task Manager   │ ◄── Zustand State + Firebase
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Action Log    │ ◄── Audit Trail
-└─────────────────┘
-```
-
-### Tech Stack
-- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS
-- **State Management**: Zustand with localStorage persistence
-- **Animations**: Framer Motion (shared layout animations)
-- **UI Components**: Aceternity UI, custom glassmorphism
-- **AI/Voice**: Hume AI Empathic Voice Interface (EVI)
-- **Database**: Firebase Firestore (optional persistence)
-- **Charts**: Recharts for analytics dashboard
-
----
-
-## Core Features
-
-### 1. Emotional Intelligence
-**File**: `src/hooks/useHumeHandler.ts`
-
-Aura analyzes vocal prosody using Hume AI's 48-dimensional emotion model:
-- **Distress**: Sadness, frustration, disappointment
-- **Anxiety**: Fear, nervousness, worry
-- **Mental Fatigue**: Tiredness, boredom, confusion
-
-**Stress Calculation**:
-```typescript
-Stress = (Distress × 0.5) + (Anxiety × 0.3) + (Mental Fatigue × 0.2)
+src/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # Main marketplace interface
+│   ├── orders/page.tsx    # Order history page
+│   └── api/               # API routes for Stripe integration
+├── components/            # React components
+│   ├── ProductCard.tsx    # Product display with emotion discounts
+│   ├── ProductGrid.tsx    # Responsive product grid
+│   ├── CartSidebar.tsx    # Shopping cart with empathy pricing
+│   ├── CheckoutModal.tsx  # Stripe checkout integration
+│   ├── FilterSidebar.tsx  # Voice-responsive filters
+│   ├── VoiceController.tsx # Hume EVI interface
+│   ├── EnhancedAuraSphere.tsx # Emotion visualization
+│   └── AnalyticsDashboard.tsx # Real-time emotion charts
+├── hooks/                 # Custom React hooks
+│   └── useHumeHandler.ts  # Voice command processing
+├── lib/                   # Utility libraries
+│   ├── sanity.ts          # CMS client and queries
+│   ├── firebaseService.ts # Analytics and order storage
+│   └── stripe.ts          # Payment processing
+├── store/                 # State management
+│   └── useMarketStore.ts  # E-commerce state with Zustand
+└── types/                 # TypeScript definitions
 ```
 
-**Thresholds**:
-- 0-30: Calm (Green)
-- 31-60: Elevated (Amber)
-- 61-100: High Stress (Red)
+## Core Components
 
-### 2. Autonomous Task Management
-**File**: `src/store/useAuraStore.ts`
+### Emotion Detection System
 
-When stress exceeds threshold, Aura triggers `manage_burnout` tool:
-- **Postpone**: Move task to tomorrow
-- **Cancel**: Remove task from list
-- **Delegate**: Mark for team assignment
-- **Complete**: Mark as finished
-
-### 3. Confirmation Gates
-**File**: `src/components/ConfirmActionModal.tsx`
-
-5-second countdown modal appears before AI actions execute:
-- Progress bar shows time remaining
-- "Undo" button cancels action
-- Auto-executes after timeout
-- Prevents unwanted changes
-
-### 4. Action Log (Audit Trail)
-**File**: `src/components/ActionLog.tsx`
-
-Tracks all AI decisions with:
-- Timestamp (e.g., "10:45 AM")
-- Emotion trigger (e.g., "Distress (82%)")
-- Action taken (e.g., "Postponed Chemistry Lab")
-- Outcome (success/cancelled/failed)
-- Stress score at time of action
-
-### 5. Visual Feedback
-**File**: `src/components/EnhancedAuraSphere.tsx`
-
-Animated sphere with orbiting particles:
-- **Idle**: Slow pulsing, teal glow
-- **Listening**: Faster pulsing, blue rings
-- **Speaking**: Rapid pulsing, multi-color
-- **Stressed**: Red glow, erratic movement
-
----
-
-## Technical Implementation
-
-### Stress Calculation Engine
-**Location**: `src/hooks/useHumeHandler.ts` (line 52-98)
+The emotion detection system analyzes voice input through Hume AI's prosody analysis:
 
 ```typescript
-const calculateStress = (prosody: any) => {
-    // Extract emotion scores
-    const distressScore = Math.max(...distressEmotions.map(e => prosody.scores[e] || 0));
-    const anxietyScore = Math.max(...anxietyEmotions.map(e => prosody.scores[e] || 0));
-    const overloadScore = Math.max(...overloadEmotions.map(e => prosody.scores[e] || 0));
-
-    // Apply weighted formula
-    const stressTotal = (distressScore * 0.5) + (anxietyScore * 0.3) + (overloadScore * 0.2);
+const calculateEmotionDiscount = (prosody: any) => {
+    if (!prosody?.scores) return 0;
     
-    // Normalize to 0-100
-    return Math.min(Math.round(stressTotal * 100), 100);
+    const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
+    const maxStress = Math.max(
+        ...stressEmotions.map(e => prosody.scores[e] || 0)
+    );
+    
+    // Convert to discount percentage (0-25%)
+    return Math.min(Math.round(maxStress * 25), 25);
 };
 ```
 
-### Tool Calling Flow
-**Location**: `src/hooks/useHumeHandler.ts` (line 220-270)
+### Voice Tools Integration
 
-1. User speaks → Hume detects stress
-2. AI decides to call `manage_burnout` tool
-3. Tool handler extracts parameters (task_id, adjustment_type)
-4. Normalizes AI variations ("done" → "complete")
-5. Sets pending action in store
-6. Confirmation modal appears
-7. User confirms or cancels
-8. Action executes and logs to audit trail
+Vora implements 6 voice tools for Hume EVI:
+
+1. **filter_products** - Filter products by category, color, price
+2. **add_to_cart** - Add products to shopping cart
+3. **trigger_checkout** - Open checkout modal
+4. **apply_discount** - Apply empathy-based discounts
+5. **collect_address** - Collect delivery address via voice
+6. **navigate_to_orders** - Navigate to order history
 
 ### State Management
-**Location**: `src/store/useAuraStore.ts`
+
+Zustand store manages the entire e-commerce state:
 
 ```typescript
-interface AuraState {
-    stressScore: number;
-    tasks: Task[];
-    voiceState: 'idle' | 'listening' | 'speaking' | 'processing';
-    sessionHistory: { time: string; score: number }[];
-    feedbackMessage: { text: string; type: string } | null;
-    actionLogs: ActionLog[];
-    currentEmotion: string;
-    pendingAction: PendingAction | null;
+interface MarketStore {
+    products: Product[];
+    cart: CartItem[];
+    filters: ProductFilters;
+    emotionData: Record<string, number>;
+    deliveryAddress: string;
+    // ... methods for cart, filters, checkout
 }
 ```
 
-### Animation System
-**Location**: `src/components/TaskGrid.tsx`
+## Design System
 
-Uses Framer Motion's LayoutGroup for cross-column morphing:
+### Zen Philosophy
+Vora follows a "Zen" design approach prioritizing calm and comfort:
+
+- **Teal (#2DD4BF)** - Calm/browsing state
+- **Amber (#FBBF24)** - Engaged/considering state  
+- **Rose (#FB7185)** - Stressed/frustrated state
+
+### Glassmorphism Variants
+Four glassmorphism styles create depth and premium feel:
+
+- `glass` - Standard translucent background
+- `glass-card` - Card-style with subtle borders
+- `glass-premium` - Enhanced with ring effects
+- `glass-subtle` - Minimal transparency
+
+## API Integration
+
+### Hume EVI Configuration
+Voice tools are configured in Hume Portal with JSON schemas:
+
+```json
+{
+  "name": "filter_products",
+  "description": "Filter products by category, color, or price range",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "category": {"type": "string"},
+      "color": {"type": "string"},
+      "max_price": {"type": "number"}
+    }
+  }
+}
+```
+
+### Stripe Integration
+Dynamic pricing with emotion discounts:
+
 ```typescript
-<LayoutGroup>
-    <motion.div layoutId={task.id}>
-        {/* Task card content */}
-    </motion.div>
-</LayoutGroup>
+const lineItems = cart.map(item => ({
+    price_data: {
+        currency: 'usd',
+        product_data: { name: item.title },
+        unit_amount: Math.round(item.price * (1 - emotionDiscount/100) * 100)
+    },
+    quantity: item.quantity
+}));
 ```
 
----
+### Sanity CMS Schema
+Product schema with emotion boost values:
 
-## API Reference
-
-### Hume AI Configuration
-**Portal**: https://beta.hume.ai/evi/configs
-
-**Required Tools**:
-1. **manage_burnout**
-   - Parameters: `task_id` (string), `adjustment_type` (enum: postpone/cancel/delegate/complete)
-   - Description: "Reschedule or modify tasks based on user stress"
-
-2. **end_call**
-   - Parameters: None
-   - Description: "End the voice session"
-
-**Recommended LLM**: Claude 3.5 Sonnet or Gemini 1.5 Flash
-
-### Environment Variables
-```bash
-NEXT_PUBLIC_HUME_API_KEY=your_api_key
-NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```typescript
+{
+    name: 'product',
+    fields: [
+        { name: 'title', type: 'string' },
+        { name: 'price', type: 'number' },
+        { name: 'category', type: 'string' },
+        { name: 'tags', type: 'array', of: [{type: 'string'}] },
+        { name: 'stock', type: 'number' },
+        { name: 'emotionBoost', type: 'number' }, // 0-1 comfort factor
+        { name: 'image', type: 'image' }
+    ]
+}
 ```
-
----
 
 ## Deployment
 
-### Prerequisites
-- Node.js 18+
-- Hume AI account with EVI access
-- Firebase project (optional)
-
-### Installation
+### Environment Variables
 ```bash
-git clone https://github.com/yourusername/aura-ai.git
-cd aura-ai
+NEXT_PUBLIC_HUME_API_KEY=your_hume_api_key
+NEXT_PUBLIC_HUME_CONFIG_ID=your_hume_config_id
+NEXT_PUBLIC_SANITY_PROJECT_ID=your_sanity_project_id
+NEXT_PUBLIC_SANITY_DATASET=production
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
+STRIPE_SECRET_KEY=your_stripe_secret
+NEXT_PUBLIC_FIREBASE_CONFIG=your_firebase_config
+```
+
+### Build Commands
+```bash
 npm install
-```
-
-### Development
-```bash
-npm run dev
-# Open http://localhost:3000
-```
-
-### Production Build
-```bash
 npm run build
 npm start
 ```
 
-### Deployment Platforms
-- **Vercel**: Automatic deployment from GitHub
-- **Netlify**: Configure build command: `npm run build`
-- **AWS Amplify**: Connect repository and deploy
+## Analytics & Monitoring
 
----
+### Emotion Tracking
+Real-time emotion data is stored every 10 seconds:
 
-## Testing
+```typescript
+const emotionSnapshot = {
+    timestamp: Date.now(),
+    emotions: emotionData,
+    cartValue: totalCartValue,
+    sessionId: generateSessionId()
+};
+```
 
-### Manual Testing Checklist
-- [ ] Voice session starts successfully
-- [ ] Stress score updates in real-time
-- [ ] AI detects stress and triggers tool
-- [ ] Confirmation modal appears with countdown
-- [ ] Undo button cancels action
-- [ ] Task moves with smooth animation
-- [ ] Action log records event
-- [ ] Toast notification appears
-- [ ] Session ends cleanly
+### Order Analytics
+Orders include emotion context for business insights:
 
-### Test Phrases
-- **High Stress**: "I'm so overwhelmed, I can't handle this anymore"
-- **Task Completion**: "I just finished the Math Assignment"
-- **End Session**: "Goodbye Aura, end the call"
+```typescript
+const orderData = {
+    items: cart,
+    totalAmount: finalAmount,
+    emotionDiscount: appliedDiscount,
+    deliveryAddress: address,
+    emotionState: currentEmotions,
+    timestamp: Date.now()
+};
+```
 
----
+## Security & Privacy
+
+### Data Protection
+- Voice data processed by Hume AI (not stored locally)
+- Emotion scores aggregated, not raw audio
+- Orders stored with minimal PII
+- Stripe handles all payment data
+
+### Ethical Considerations
+- Discount cap prevents exploitation (max 25%)
+- Empathetic messaging, not manipulative
+- User control over voice sessions
+- Transparent emotion detection
+
+## Performance Optimizations
+
+### Code Splitting
+- Dynamic imports for heavy components
+- Lazy loading of analytics dashboard
+- Optimized bundle sizes with Next.js
+
+### Caching Strategy
+- Sanity CDN for product images
+- Zustand persistence for cart state
+- Firebase caching for analytics
+
+### Voice Optimization
+- 80ms audio chunks for real-time processing
+- WebSocket connection management
+- Audio stream cleanup on unmount
+
+## Testing Strategy
+
+### Unit Tests
+- Component rendering and interactions
+- State management logic
+- Utility functions and calculations
+
+### Integration Tests
+- Voice tool execution
+- Payment flow with Stripe
+- Emotion discount calculations
+
+### E2E Tests
+- Complete shopping journey
+- Voice command scenarios
+- Checkout and order placement
+
+## Future Enhancements
+
+### Planned Features
+- Multi-language emotion recognition
+- Advanced emotion pattern analysis
+- Seller analytics dashboard
+- Mental health resource integration
+- Cultural emotion adaptation
+
+### Technical Improvements
+- WebRTC for better audio quality
+- Edge computing for faster emotion processing
+- Advanced caching strategies
+- Mobile app development
 
 ## Contributing
 
-### Code Style
+### Development Setup
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Set up environment variables
+4. Configure Hume Portal tools
+5. Seed Sanity with sample data
+6. Run development server: `npm run dev`
+
+### Code Standards
 - TypeScript strict mode
-- Functional components with hooks
-- Tailwind CSS for styling
-- Framer Motion for animations
-
-### File Structure
-```
-src/
-├── app/              # Next.js pages
-├── components/       # React components
-├── hooks/            # Custom hooks (Hume, Firebase)
-├── store/            # Zustand state management
-├── types/            # TypeScript definitions
-└── lib/              # Utilities (Firebase, etc.)
-```
-
-### Key Files
-- `useHumeHandler.ts`: Voice AI integration
-- `useAuraStore.ts`: Global state management
-- `TaskGrid.tsx`: Task management UI
-- `ConfirmActionModal.tsx`: Confirmation gates
-- `ActionLog.tsx`: Audit trail component
+- ESLint + Prettier formatting
+- Conventional commit messages
+- Component documentation
+- Test coverage requirements
 
 ---
 
-## Troubleshooting
-
-### Common Issues
-
-**Issue**: AI doesn't trigger tools  
-**Solution**: Check Hume Portal configuration, ensure tool-capable LLM is selected
-
-**Issue**: Stress score always 0  
-**Solution**: Verify microphone permissions, check Hume API key
-
-**Issue**: Tasks don't animate  
-**Solution**: Ensure LayoutGroup wraps both columns, layoutId is unique
-
-**Issue**: Confirmation modal doesn't appear  
-**Solution**: Check pendingAction state in store, verify modal is rendered
-
----
-
-## License
-MIT License - See LICENSE file for details
-
-## Support
-- GitHub Issues: https://github.com/yourusername/aura-ai/issues
-- Documentation: See STRESS_METRICS.md, DEMO_SCRIPT_V2.md
-- Contact: your.email@example.com
-
----
-
-**Built with ❤️ for mental health and productivity**
+*Vora represents the future of empathic e-commerce, where technology understands and responds to human emotions with genuine care.*
