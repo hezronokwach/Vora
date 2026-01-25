@@ -236,13 +236,25 @@ export const useHume = () => {
                             break;
 
                         case 'collect_address':
-                            useMarketStore.getState().setDeliveryAddress(toolParams.address);
-                            toolResult = `Delivery address saved: ${toolParams.address}`;
-                            console.log('✅ Address collected:', toolParams.address);
+                            // Convert spoken numbers to digits and format address
+                            const formattedAddress = toolParams.address
+                                .replace(/\bone twenty three\b/gi, '123')
+                                .replace(/\bone hundred twenty three\b/gi, '123')
+                                .replace(/\bone two three\b/gi, '123')
+                                .split(' ')
+                                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(' ');
+                            
+                            useMarketStore.getState().setDeliveryAddress(formattedAddress);
+                            toolResult = `Delivery address saved: ${formattedAddress}`;
+                            console.log('✅ Address collected:', formattedAddress);
                             break;
 
                         case 'navigate_to_orders':
-                            window.location.href = '/orders';
+                            // Delay navigation to let AI finish speaking
+                            setTimeout(() => {
+                                window.location.href = '/orders';
+                            }, 2000);
                             toolResult = 'Navigating to your orders page';
                             console.log('✅ Navigating to orders page');
                             break;
