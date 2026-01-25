@@ -84,7 +84,6 @@ export const useHume = () => {
             };
 
             recorder.onerror = (e) => {
-                console.error('MediaRecorder error:', e);
                 setError('Microphone error');
             };
 
@@ -93,9 +92,7 @@ export const useHume = () => {
             setIsMicMuted(false);
             setVoiceState('listening');
 
-            console.log('Audio capture started');
         } catch (err: any) {
-            console.error('Failed to start audio capture:', err);
             setError(err.message);
         }
     }, [setVoiceState]);
@@ -107,12 +104,10 @@ export const useHume = () => {
             recorderRef.current = null;
             setIsMicMuted(true);
             setVoiceState('idle');
-            console.log('Audio capture stopped');
         }
     }, [setVoiceState]);
 
     const handleOpen = useCallback(async () => {
-        console.log('Hume socket opened');
         setStatus('ACTIVE');
 
         const player = new EVIWebAudioPlayer();
@@ -121,8 +116,6 @@ export const useHume = () => {
     }, []);
 
     const handleMessage = useCallback(async (msg: any) => {
-        console.log('Hume message:', msg.type);
-
         switch (msg.type) {
             case 'audio_output':
                 if (playerRef.current && !isSpeakerMutedRef.current) {
@@ -145,7 +138,6 @@ export const useHume = () => {
                         // Calculate emotion discount from User Message
                         if (msg.models?.prosody) {
                             const discount = calculateEmotionDiscount(msg.models.prosody);
-                            console.log('Calculated emotion discount:', discount, '%');
                             setEmotionData(msg.models.prosody.scores || {});
                             setEmotions(msg.models.prosody.scores || {});
                         }
@@ -169,7 +161,6 @@ export const useHume = () => {
                 break;
 
             case 'user_interruption':
-                console.log('User interrupted');
                 if (playerRef.current) {
                     playerRef.current.stop();
                 }
@@ -179,38 +170,28 @@ export const useHume = () => {
             case 'tool_call':
                 const toolName = msg.name;
                 const toolCallId = msg.toolCallId || msg.tool_call_id;
-                const toolParams = JSON.parse(msg.parameters); // Parse the JSON string
-
-                console.log('VORA TOOL CALL:', toolName, toolParams);
+                const toolParams = JSON.parse(msg.parameters);
 
                 try {
                     let toolResult = '';
 
                     switch (toolName) {
                         case 'filter_products':
-                            console.log('🔍 Before filter - Current filters:', useMarketStore.getState().filters);
-                            console.log('🔍 Tool params received:', toolParams);
-                            
                             useMarketStore.getState().setFilters({
                                 category: toolParams.category,
                                 color: toolParams.color,
                                 maxPrice: toolParams.max_price
                             });
                             
-                            console.log('🔍 After filter - New filters:', useMarketStore.getState().filters);
-                            
                             const filteredCount = useMarketStore.getState().products.length;
                             toolResult = `Successfully filtered products. Found ${filteredCount} items matching the criteria.`;
-                            console.log('✅ Products filtered successfully');
                             break;
 
                         case 'add_to_cart':
-                            // First try to find by ID, then by title
                             let product = useMarketStore.getState().products
                                 .find(p => p._id === toolParams.product_id);
                             
                             if (!product) {
-                                // Fallback: search by title
                                 product = useMarketStore.getState().products
                                     .find(p => p.title.toLowerCase().includes(toolParams.product_id.toLowerCase()));
                             }
@@ -218,7 +199,6 @@ export const useHume = () => {
                             if (product) {
                                 useMarketStore.getState().addToCart(product, toolParams.quantity || 1);
                                 toolResult = `Added ${product.title} to cart (quantity: ${toolParams.quantity || 1})`;
-                                console.log('✅ Product added to cart:', product.title);
                             } else {
                                 throw new Error(`Product not found: ${toolParams.product_id}`);
                             }
@@ -227,16 +207,13 @@ export const useHume = () => {
                         case 'trigger_checkout':
                             useMarketStore.getState().setCheckoutOpen(true);
                             toolResult = 'Checkout modal opened successfully';
-                            console.log('✅ Checkout modal opened');
                             break;
 
                         case 'apply_discount':
                             toolResult = 'Empathy discount applied successfully';
-                            console.log('✅ Empathy discount applied');
                             break;
 
                         case 'collect_address':
-                            // Convert spoken numbers to digits and format address
                             const formattedAddress = toolParams.address
                                 .replace(/\bone twenty three\b/gi, '123')
                                 .replace(/\bone hundred twenty three\b/gi, '123')
@@ -247,23 +224,19 @@ export const useHume = () => {
                             
                             useMarketStore.getState().setDeliveryAddress(formattedAddress);
                             toolResult = `Delivery address saved: ${formattedAddress}`;
-                            console.log('✅ Address collected:', formattedAddress);
                             break;
 
                         case 'navigate_to_orders':
-                            // Delay navigation to let AI finish speaking
                             setTimeout(() => {
                                 window.location.href = '/orders';
                             }, 2000);
                             toolResult = 'Navigating to your orders page';
-                            console.log('✅ Navigating to orders page');
                             break;
 
                         default:
                             throw new Error(`Unknown tool: ${toolName}`);
                     }
 
-                    // Send success response back to EVI
                     if (socketRef.current) {
                         socketRef.current.sendToolResponseMessage({
                             toolCallId: toolCallId,
@@ -272,7 +245,6 @@ export const useHume = () => {
                     }
 
                 } catch (error: any) {
-                    // Send error response back to EVI
                     if (socketRef.current) {
                         socketRef.current.sendToolErrorMessage({
                             toolCallId: toolCallId,
@@ -280,17 +252,11 @@ export const useHume = () => {
                             content: error.message
                         });
                     }
-                    console.error('❌ Tool error:', error);
                 }
                 break;
 
             case 'error':
-                console.error('Hume message error:', msg.message);
                 setError(msg.message);
-                break;
-
-            default:
-                console.log('DEBUG: Received message of type:', msg.type, msg);
                 break;
         }
     }, [setEmotionData, stopAudioCapture]);
@@ -334,7 +300,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
 
             const fullPrompt = `${baseInstructions}\n\nAVAILABLE PRODUCTS:\n${productContext}`;
 
-            console.log('Syncing enhanced Vora personality to Hume');
             socketRef.current.sendSessionSettings({
                 system_prompt: fullPrompt
             });
@@ -342,13 +307,11 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     }, [products, status]);
 
     const handleError = useCallback((err: Event | Error) => {
-        console.error('Hume socket error:', err);
         setError('Connection error');
         setStatus('ERROR');
     }, []);
 
     const handleClose = useCallback((e: any) => {
-        console.log('Hume socket closed:', e);
         setStatus('IDLE');
         setVoiceState('idle');
 
@@ -365,7 +328,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     const startSession = useCallback(async (options?: { configId?: string; voiceId?: string; language?: string }) => {
         try {
             if (socketRef.current) {
-                console.log('Session already active');
                 return;
             }
 
@@ -399,7 +361,6 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
             socket.on('close', handleClose);
 
         } catch (err: any) {
-            console.error('Failed to start Hume session:', err);
             setError(err.message);
             setStatus('ERROR');
         }
@@ -420,13 +381,11 @@ REMEMBER: You're not just selling products - you're providing a caring, supporti
     const updateSessionSettings = useCallback((settings: { voiceId?: string; systemPrompt?: string; context?: string }) => {
         if (socketRef.current) {
             socketRef.current.sendSessionSettings(settings);
-            console.log('Session settings updated:', settings);
         }
     }, []);
 
     const toggleMic = useCallback(async () => {
         if (!socketRef.current) {
-            console.log('No active session');
             return;
         }
 
