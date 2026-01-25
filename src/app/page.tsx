@@ -11,7 +11,7 @@ import { AmbientBackground } from '@/components/AmbientBackground';
 import { useMarketStore } from '@/store/useMarketStore';
 import { useEffect } from 'react';
 import { getProducts } from '@/lib/sanity';
-import { ShoppingCart, Filter } from 'lucide-react';
+import { ShoppingCart, Filter, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Home() {
@@ -65,6 +65,15 @@ export default function Home() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = '/orders'}
+                className="p-2 glass-card rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <Package className="w-5 h-5" />
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setFilterOpen(!filterOpen)}
                 data-testid="filter-button"
                 className="p-2 glass-card rounded-xl hover:bg-white/10 transition-colors"
@@ -106,10 +115,10 @@ export default function Home() {
             
             {/* Voice Controller & Analytics */}
             <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex-1">
+              <div className="lg:w-1/3">
                 <VoiceController />
               </div>
-              <div className="flex-1">
+              <div className="lg:w-2/3">
                 <AnalyticsDashboard />
               </div>
             </div>

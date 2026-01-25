@@ -235,6 +235,18 @@ export const useHume = () => {
                             console.log('✅ Empathy discount applied');
                             break;
 
+                        case 'collect_address':
+                            useMarketStore.getState().setDeliveryAddress(toolParams.address);
+                            toolResult = `Delivery address saved: ${toolParams.address}`;
+                            console.log('✅ Address collected:', toolParams.address);
+                            break;
+
+                        case 'navigate_to_orders':
+                            window.location.href = '/orders';
+                            toolResult = 'Navigating to your orders page';
+                            console.log('✅ Navigating to orders page');
+                            break;
+
                         default:
                             throw new Error(`Unknown tool: ${toolName}`);
                     }

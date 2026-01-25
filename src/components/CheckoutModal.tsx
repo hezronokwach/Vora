@@ -50,6 +50,19 @@ export const CheckoutModal = () => {
       const { sessionId } = await response.json();
       console.log('✅ Stripe session created:', sessionId);
       
+      // Save order to localStorage
+      const order = {
+        id: sessionId,
+        items: cart,
+        total: total,
+        deliveryAddress: useMarketStore.getState().deliveryAddress || 'No address provided',
+        timestamp: Date.now(),
+        emotionDiscount
+      };
+      
+      const existingOrders = JSON.parse(localStorage.getItem('vora-orders') || '[]');
+      localStorage.setItem('vora-orders', JSON.stringify([...existingOrders, order]));
+      
       // Reduce stock BEFORE getting redirect URL
       console.log('📦 About to reduce stock for items:', cart.map(item => ({ id: item._id, qty: item.quantity })));
       

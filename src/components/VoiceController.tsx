@@ -42,12 +42,12 @@ export const VoiceController = () => {
                 </motion.div>
             )}
 
-            <div className="w-full flex items-center gap-3 glass-card p-3 rounded-full">
+            <div className="w-full max-w-sm flex items-center gap-3 glass-card p-3 rounded-full">
                 {!isActive ? (
                     <button
                         onClick={() => startSession()}
                         disabled={isConnecting}
-                        className={`flex items-center justify-center gap-4 w-full py-4 rounded-full font-bold uppercase tracking-widest text-xs transition-all duration-500 ${
+                        className={`flex items-center justify-center gap-3 w-full py-3 rounded-full font-semibold text-xs transition-all duration-500 ${
                             isConnecting
                                 ? 'bg-white/5 text-white/20'
                                 : 'bg-calm text-white hover:bg-calm/90 hover:scale-[1.02] active:scale-[0.98]'
@@ -58,7 +58,7 @@ export const VoiceController = () => {
                         ) : (
                             <Play className="w-3 h-3 fill-current" />
                         )}
-                        {isConnecting ? 'Connecting to Vora' : 'Start Voice Session'}
+                        {isConnecting ? 'Connecting...' : 'Start Voice'}
                     </button>
                 ) : (
                     <div className="flex items-center justify-between w-full px-2">

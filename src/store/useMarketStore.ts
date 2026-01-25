@@ -34,6 +34,7 @@ interface MarketState {
   emotionData: Record<string, number>;
   notification: { message: string; type: 'success' | 'error' } | null;
   loadingStates: Record<string, boolean>;
+  deliveryAddress: string;
   
   setProducts: (products: Product[]) => void;
   setFilters: (filters: Partial<Filters>) => void;
@@ -50,6 +51,7 @@ interface MarketState {
   showNotification: (message: string, type: 'success' | 'error') => void;
   clearNotification: () => void;
   setLoading: (key: string, loading: boolean) => void;
+  setDeliveryAddress: (address: string) => void;
   
   // Computed properties
   get cartTotal(): number;
@@ -69,6 +71,7 @@ export const useMarketStore = create<MarketState>()(
       emotionData: {},
       notification: null,
       loadingStates: {},
+      deliveryAddress: '',
 
       setProducts: (products) => set({ products }),
       
@@ -157,6 +160,8 @@ export const useMarketStore = create<MarketState>()(
       setLoading: (key, loading) => set((state) => ({
         loadingStates: { ...state.loadingStates, [key]: loading }
       })),
+      
+      setDeliveryAddress: (address) => set({ deliveryAddress: address }),
       
       // Computed properties
       get cartTotal() {
