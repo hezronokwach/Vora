@@ -6,7 +6,7 @@ import { X, CreditCard, User, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SqgU71SF3fQ8b3RWCEEFczUUWgQggYx1se2QtosiJ65X6x0pSz7VdQ9e7u0xkvVsaOxdOkXNPN8t5HYuyHkb1Ru005ank2fWD');
 
 interface CheckoutModalProps {}
 
@@ -54,11 +54,15 @@ export const CheckoutModal = () => {
       
       const stripe = await stripePromise;
       
-      if (stripe) {
-        const { error } = await stripe.redirectToCheckout({ sessionId });
-        if (error) {
-          console.error('Stripe redirect error:', error);
-        }
+      if (stripe && sessionId) {
+        // Use the session URL from Stripe instead of constructing it
+        const sessionResponse = await fetch('/api/checkout-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+        const { url } = await sessionResponse.json();
+        window.location.href = url;
       }
     } catch (error) {
       console.error('Checkout error:', error);
