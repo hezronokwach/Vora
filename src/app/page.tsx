@@ -3,6 +3,7 @@
 import { ProductGrid } from '@/components/ProductGrid';
 import { CartSidebar } from '@/components/CartSidebar';
 import { CheckoutModal } from '@/components/CheckoutModal';
+import { Notification } from '@/components/Notification';
 import { VoiceController } from '@/components/VoiceController';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { FilterSidebar } from '@/components/FilterSidebar';
@@ -121,6 +122,9 @@ export default function Home() {
         
         {/* Checkout Modal */}
         {checkoutOpen && <CheckoutModal />}
+        
+        {/* Notification */}
+        <Notification />
       </main>
     </>
   );

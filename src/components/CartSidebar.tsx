@@ -8,7 +8,7 @@ import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
 interface CartSidebarProps {}
 
 export const CartSidebar = () => {
-  const { cart, cartOpen, setCartOpen, updateCartQuantity, removeFromCart, setCheckoutOpen, emotionData } = useMarketStore();
+  const { cart, cartOpen, setCartOpen, updateCartQuantity, removeFromCart, setCheckoutOpen, emotionData, loadingStates, setLoading } = useMarketStore();
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
@@ -108,10 +108,20 @@ export const CartSidebar = () => {
                           </div>
                           
                           <button
-                            onClick={() => removeFromCart(item._id)}
-                            className="text-rose-400 hover:text-rose-300 text-xs transition-colors"
+                            onClick={() => {
+                              setLoading(`remove-${item._id}`, true);
+                              setTimeout(() => {
+                                removeFromCart(item._id);
+                                setLoading(`remove-${item._id}`, false);
+                              }, 200);
+                            }}
+                            disabled={loadingStates[`remove-${item._id}`]}
+                            className="text-rose-400 hover:text-rose-300 disabled:text-rose-400/50 text-xs transition-colors flex items-center gap-1"
                           >
-                            Remove
+                            {loadingStates[`remove-${item._id}`] && (
+                              <div className="w-3 h-3 border border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                            )}
+                            {loadingStates[`remove-${item._id}`] ? 'Removing...' : 'Remove'}
                           </button>
                         </div>
                       </div>

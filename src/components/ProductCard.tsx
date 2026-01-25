@@ -10,7 +10,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
-  const { addToCart, emotionData } = useMarketStore();
+  const { addToCart, emotionData, loadingStates, setLoading } = useMarketStore();
 
   // Calculate emotion discount for this product
   const stressEmotions = ['distress', 'frustration', 'anxiety', 'sadness'];
@@ -22,8 +22,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const discountedPrice = product.price * (1 - emotionDiscount / 100);
 
   const handleAddToCart = () => {
-    addToCart(product, 1);
+    setLoading(`add-${product._id}`, true);
+    setTimeout(() => {
+      addToCart(product, 1);
+      setLoading(`add-${product._id}`, false);
+    }, 300);
   };
+
+  const isLoading = loadingStates[`add-${product._id}`] || false;
 
   return (
     <motion.div
@@ -73,12 +79,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </div>
           
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: isLoading ? 1 : 1.05 }}
+            whileTap={{ scale: isLoading ? 1 : 0.95 }}
             onClick={handleAddToCart}
-            className="px-3 py-2 bg-calm/20 hover:bg-calm/30 text-calm border border-calm/30 rounded-lg transition-colors text-sm font-medium"
+            disabled={isLoading || product.stock === 0}
+            className="px-3 py-2 bg-calm/20 hover:bg-calm/30 disabled:bg-calm/10 text-calm border border-calm/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
           >
-            Add to Cart
+            {isLoading && (
+              <div className="w-3 h-3 border border-calm/30 border-t-calm rounded-full animate-spin" />
+            )}
+            {isLoading ? 'Adding...' : product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </motion.button>
         </div>
 

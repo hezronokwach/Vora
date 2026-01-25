@@ -32,6 +32,8 @@ interface MarketState {
   checkoutOpen: boolean;
   filterOpen: boolean;
   emotionData: Record<string, number>;
+  notification: { message: string; type: 'success' | 'error' } | null;
+  loadingStates: Record<string, boolean>;
   
   setProducts: (products: Product[]) => void;
   setFilters: (filters: Partial<Filters>) => void;
@@ -45,6 +47,9 @@ interface MarketState {
   setEmotionData: (emotions: Record<string, number>) => void;
   clearCart: () => void;
   reduceStock: (productId: string, quantity: number) => void;
+  showNotification: (message: string, type: 'success' | 'error') => void;
+  clearNotification: () => void;
+  setLoading: (key: string, loading: boolean) => void;
   
   // Computed properties
   get cartTotal(): number;
@@ -62,6 +67,8 @@ export const useMarketStore = create<MarketState>()(
       checkoutOpen: false,
       filterOpen: false,
       emotionData: {},
+      notification: null,
+      loadingStates: {},
 
       setProducts: (products) => set({ products }),
       
@@ -81,7 +88,10 @@ export const useMarketStore = create<MarketState>()(
         // Check stock limit
         if (newQuantity > product.stock) {
           console.warn(`Cannot add ${quantity} items. Only ${product.stock - currentQuantity} available.`);
-          return state;
+          return {
+            ...state,
+            notification: { message: `Only ${product.stock - currentQuantity} items available`, type: 'error' }
+          };
         }
         
         if (existing) {
@@ -90,15 +100,23 @@ export const useMarketStore = create<MarketState>()(
               item._id === product._id
                 ? { ...item, quantity: newQuantity }
                 : item
-            )
+            ),
+            notification: { message: `${product.title} quantity updated`, type: 'success' }
           };
         }
-        return { cart: [...state.cart, { ...product, quantity }] };
+        return { 
+          cart: [...state.cart, { ...product, quantity }],
+          notification: { message: `${product.title} added to cart`, type: 'success' }
+        };
       }),
       
-      removeFromCart: (productId) => set((state) => ({
-        cart: state.cart.filter(item => item._id !== productId)
-      })),
+      removeFromCart: (productId) => set((state) => {
+        const item = state.cart.find(item => item._id === productId);
+        return {
+          cart: state.cart.filter(item => item._id !== productId),
+          notification: item ? { message: `${item.title} removed from cart`, type: 'success' } : null
+        };
+      }),
 
       updateCartQuantity: (productId, quantity) => set((state) => {
         if (quantity <= 0) {
@@ -132,6 +150,12 @@ export const useMarketStore = create<MarketState>()(
             ? { ...product, stock: Math.max(0, product.stock - quantity) }
             : product
         )
+      })),
+      
+      showNotification: (message, type) => set({ notification: { message, type } }),
+      clearNotification: () => set({ notification: null }),
+      setLoading: (key, loading) => set((state) => ({
+        loadingStates: { ...state.loadingStates, [key]: loading }
       })),
       
       // Computed properties
