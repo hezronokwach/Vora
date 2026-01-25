@@ -154,4 +154,52 @@ export const AdminDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))}\n            </div>\n          )}\n        </motion.div>\n\n        {/* Analytics Sessions */}\n        <motion.div\n          initial={{ opacity: 0, y: 20 }}\n          animate={{ opacity: 1, y: 0 }}\n          transition={{ delay: 0.5 }}\n          className=\"glass-card p-6 rounded-xl\"\n        >\n          <h2 className=\"text-xl font-bold text-white/90 mb-4\">Recent Sessions</h2>\n          \n          {sessions.length === 0 ? (\n            <p className=\"text-white/60 text-center py-8\">No session data yet</p>\n          ) : (\n            <div className=\"space-y-4\">\n              {sessions.map((session, index) => (\n                <div\n                  key={session.id || index}\n                  className=\"flex items-center justify-between p-4 bg-white/5 rounded-lg\"\n                >\n                  <div>\n                    <p className=\"text-white/90 font-medium\">\n                      Session {session.sessionId?.slice(-8) || index + 1}\n                    </p>\n                    <p className=\"text-white/60 text-sm\">\n                      Peak emotion: {session.peakEmotionScore?.toFixed(0) || 0}%\n                    </p>\n                  </div>\n                  \n                  <div className=\"text-right\">\n                    <p className=\"text-white/90\">\n                      ${session.totalSavings?.toFixed(2) || '0.00'} saved\n                    </p>\n                    <p className=\"text-white/60 text-sm\">\n                      {session.completedPurchase ? 'Purchased' : 'Browsed'}\n                    </p>\n                  </div>\n                </div>\n              ))}\n            </div>\n          )}\n        </motion.div>\n      </div>\n    </div>\n  );\n};
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Analytics Sessions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass-card p-6 rounded-xl"
+        >
+          <h2 className="text-xl font-bold text-white/90 mb-4">Recent Sessions</h2>
+          
+          {sessions.length === 0 ? (
+            <p className="text-white/60 text-center py-8">No session data yet</p>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((session, index) => (
+                <div
+                  key={session.id || index}
+                  className="flex items-center justify-between p-4 bg-white/5 rounded-lg"
+                >
+                  <div>
+                    <p className="text-white/90 font-medium">
+                      Session {session.sessionId?.slice(-8) || index + 1}
+                    </p>
+                    <p className="text-white/60 text-sm">
+                      Peak emotion: {session.peakEmotionScore?.toFixed(0) || 0}%
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-white/90">
+                      ${session.totalSavings?.toFixed(2) || '0.00'} saved
+                    </p>
+                    <p className="text-white/60 text-sm">
+                      {session.completedPurchase ? 'Purchased' : 'Browsed'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  );
+};

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MessageCircle, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const voiceExamples = [
   "Show me comfortable dresses under $100",
@@ -20,12 +20,12 @@ export const VoiceHints = () => {
   const [currentHint, setCurrentHint] = useState(0);
 
   // Rotate through hints every 4 seconds
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentHint(prev => (prev + 1) % voiceExamples.length);
     }, 4000);
     return () => clearInterval(interval);
-  });
+  }, []);
 
   return (
     <div className="fixed bottom-4 right-4 z-30">
@@ -51,5 +51,31 @@ export const VoiceHints = () => {
                     opacity: index === currentHint ? 1 : 0.5,
                     scale: index === currentHint ? 1.02 : 1
                   }}
-                  className={`text-xs p-2 rounded-lg transition-colors ${\n                    index === currentHint \n                      ? 'bg-calm/20 text-calm border border-calm/30' \n                      : 'bg-white/5 text-white/70'\n                  }`}
-                >\n                  \"{example}\"\n                </motion.div>\n              ))}\n            </div>\n          </motion.div>\n        )}\n      </AnimatePresence>\n\n      <motion.button\n        whileHover={{ scale: 1.05 }}\n        whileTap={{ scale: 0.95 }}\n        onClick={() => setIsExpanded(!isExpanded)}\n        className=\"glass-card p-3 rounded-full flex items-center gap-2 text-calm hover:text-calm/80 transition-colors\"\n      >\n        <Sparkles size={20} />\n        {!isExpanded && (\n          <span className=\"text-sm font-medium\">Voice Tips</span>\n        )}\n      </motion.button>\n    </div>\n  );\n};
+                  className={`text-xs p-2 rounded-lg transition-colors ${
+                    index === currentHint 
+                      ? 'bg-calm/20 text-calm border border-calm/30' 
+                      : 'bg-white/5 text-white/70'
+                  }`}
+                >
+                  "{example}"
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="glass-card p-3 rounded-full flex items-center gap-2 text-calm hover:text-calm/80 transition-colors"
+      >
+        <Sparkles size={20} />
+        {!isExpanded && (
+          <span className="text-sm font-medium">Voice Tips</span>
+        )}
+      </motion.button>
+    </div>
+  );
+};
